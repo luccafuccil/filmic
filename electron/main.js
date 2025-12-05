@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, Menu } = require("electron");
+const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const {
   handleOpenFile,
@@ -86,6 +87,43 @@ function createWindow() {
   Menu.setApplicationMenu(menu);
 }
 
+// Configuração do auto-updater
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+autoUpdater.on("update-available", (info) => {
+  console.log("Update available:", info.version);
+  mainWindow.webContents.send("update:available", info);
+});
+
+autoUpdater.on("update-not-available", () => {
+  console.log("Update not available");
+});
+
+autoUpdater.on("error", (err) => {
+  console.error("Update error:", err);
+});
+
+autoUpdater.on("download-progress", (progressObj) => {
+  console.log("Download progress:", progressObj.percent);
+  mainWindow.webContents.send("update:progress", progressObj);
+});
+
+autoUpdater.on("update-downloaded", () => {
+  console.log("Update downloaded");
+  mainWindow.webContents.send("update:downloaded");
+});
+
+// Handler para instalar update
+ipcMain.on("update:install", () => {
+  autoUpdater.quitAndInstall();
+});
+
+// Handler para baixar update
+ipcMain.on("update:download", () => {
+  autoUpdater.downloadUpdate();
+});
+
 app.whenReady().then(() => {
   ipcMain.handle("dialog:openFile", handleOpenFile);
   ipcMain.handle("dialog:openFolder", handleOpenFolder);
@@ -105,6 +143,11 @@ app.whenReady().then(() => {
   ipcMain.handle("watch:getContinueWatching", handleGetContinueWatching);
 
   createWindow();
+
+  // Verificar updates após 3 segundos (dar tempo da janela abrir)
+  setTimeout(() => {
+    autoUpdater.checkForUpdates();
+  }, 3000);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

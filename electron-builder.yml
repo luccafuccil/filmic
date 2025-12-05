@@ -15,6 +15,12 @@ asarUnpack:
 npmRebuild: false
 buildDependenciesFromSource: false
 
+# Configuração de publicação para auto-updates
+publish:
+  provider: github
+  owner: luccafuccil
+  repo: filmic
+
 win:
   target:
     - target: nsis
