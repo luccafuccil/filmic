@@ -1,0 +1,11 @@
+.movie-grid {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.movie-grid-empty {
+  color: #888;
+  padding: 20px;
+  text-align: center;
+}

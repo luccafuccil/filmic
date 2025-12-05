@@ -1,0 +1,30 @@
+appId: com.filmic.app
+productName: Filmic
+directories:
+  output: dist
+files:
+  - dist/**/*
+  - electron/**/*
+  - package.json
+  - node_modules/**/*
+asarUnpack:
+  - node_modules/@ffmpeg-installer/**/*
+  - node_modules/@ffprobe-installer/**/*
+npmRebuild: false
+buildDependenciesFromSource: false
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  signAndEditExecutable: false
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

@@ -1,0 +1,38 @@
+.continue-watching-section {
+  padding: 40px 40px 20px 40px;
+  width: 100%;
+}
+
+.continue-watching-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 20px 0;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+}
+
+.continue-watching-grid {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding-bottom: 8px;
+}
+
+/* Hide scrollbar but keep functionality */
+.continue-watching-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.continue-watching-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.continue-watching-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.continue-watching-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

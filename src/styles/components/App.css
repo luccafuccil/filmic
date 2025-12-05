@@ -1,0 +1,262 @@
+.app {
+  padding: 0;
+  padding-top: 52px;
+}
+
+.app-welcome {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.welcome-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.welcome-content {
+  max-width: 600px;
+  text-align: center;
+  animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.welcome-icon {
+  width: 120px;
+  height: 120px;
+  margin: 20px auto 0;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 3s ease-in-out infinite;
+  padding: 20px;
+}
+
+.welcome-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.welcome-title {
+  font-size: 48px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 16px 0;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-description {
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 40px 0;
+}
+
+.welcome-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  background: rgba(128, 128, 128, 0.522);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.welcome-button:hover {
+  transform: translateY(-2px);
+}
+
+.welcome-button:active {
+  transform: translateY(0);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.welcome-info-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 0 0 32px 0;
+  text-align: left;
+  transition: all 0.3s ease;
+}
+
+.welcome-info-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(128, 128, 128, 0.522);
+}
+
+.welcome-info-content {
+  text-align: center;
+}
+
+.welcome-info-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 12px 0;
+}
+
+.welcome-info-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 16px 0;
+}
+
+.welcome-info-example {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: rgba(253, 139, 40, 0.1);
+  border-radius: 12px;
+  margin: 0 0 12px 0;
+}
+
+.welcome-info-folder-icon {
+  color: #fd8b28;
+  flex-shrink: 0;
+}
+
+.welcome-info-example-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  font-family: "Courier New", monospace;
+}
+
+.welcome-info-note {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+  font-style: italic;
+}
+
+.app-content {
+  margin-top: 0;
+}
+
+.app-loading,
+.app-error,
+.app-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 52px);
+  gap: 24px;
+  color: #fff;
+}
+
+.app-loading {
+  animation: fadeIn 0.3s ease;
+}
+
+.app-loading p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.app-empty {
+  animation: fadeIn 0.3s ease;
+}
+
+.app-empty svg {
+  color: rgba(255, 255, 255, 0.3);
+  margin-bottom: 8px;
+}
+
+.app-empty h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: white;
+}
+
+.app-empty p {
+  margin: 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.app-error {
+  animation: fadeIn 0.3s ease;
+}
+
+.app-error p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 500px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.app-error button {
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #fd8b28 0%, #e16af4 100%);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-error button:hover {
+  transform: translateY(-2px);
+}
+
+.app-error button:active {
+  transform: translateY(0);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
