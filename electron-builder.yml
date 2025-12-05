@@ -2,9 +2,11 @@ appId: com.filmic.app
 productName: Filmic
 directories:
   output: dist
+icon: public/icon.ico
 files:
   - dist/**/*
   - electron/**/*
+  - public/**/*
   - package.json
 asar: true
 asarUnpack:

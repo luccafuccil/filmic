@@ -27,7 +27,7 @@ export function TitleBar({ searchQuery, onSearchChange, onSettingsClick }) {
     <div className="titlebar">
       <div className="titlebar-drag-region">
         <div className="titlebar-logo">
-          <img src="../public/assets/logo-full.png" alt="Filmic Logo"></img>
+          <img src="assets/logo-full.png" alt="Filmic Logo"></img>
         </div>
         <div className="titlebar-search">
           <svg

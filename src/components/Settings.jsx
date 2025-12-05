@@ -58,6 +58,37 @@ export function Settings({ isOpen, onClose, onChangeFolder }) {
               Trocar pasta de filmes
             </button>
           </div>
+
+          <div className="settings-divider"></div>
+
+          <div className="settings-section support-section">
+            <h3 className="settings-section-title">Apoie o Projeto</h3>
+            <p className="settings-section-description">
+              Se você gostou do Filmic, considere fazer um suporte voluntário.
+              Cada contribuição ajuda a manter o projeto vivo! ❤️
+            </p>
+            <div className="pix-container">
+              <img
+                src="assets/pix.png"
+                alt="QR Code Pix"
+                className="pix-image"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="settings-footer">
+          <p className="settings-credits">
+            Desenvolvido com muito amor pelo cinema por{" "}
+            <a
+              href="https://github.com/luccafuccil"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="github-link"
+            >
+              Lucca
+            </a>
+          </p>
         </div>
       </div>
     </div>

@@ -53,7 +53,7 @@ function createWindow() {
     height: 800,
     frame: false,
     backgroundColor: "#1a1a1a",
-    icon: path.join(__dirname, "../dist/icon.png"),
+    icon: path.join(__dirname, "../dist/icon.ico"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -61,7 +61,7 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
 
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 
   const template = [
     {

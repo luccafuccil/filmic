@@ -41,7 +41,7 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: "public/icon.png", to: "icon.png" },
+        { from: "public/icon.ico", to: "icon.ico" },
         { from: "public/assets", to: "assets" },
       ],
     }),
