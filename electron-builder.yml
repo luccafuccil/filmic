@@ -8,8 +8,8 @@ files:
   - package.json
   - node_modules/**/*
 asarUnpack:
-  - node_modules/@ffmpeg-installer/**/*
-  - node_modules/@ffprobe-installer/**/*
+  - node_modules/@ffmpeg-installer/win32-x64/**/*
+  - node_modules/@ffprobe-installer/win32-x64/**/*
 npmRebuild: false
 buildDependenciesFromSource: false
 
