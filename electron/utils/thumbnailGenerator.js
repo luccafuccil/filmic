@@ -1,6 +1,6 @@
 const ffmpeg = require("fluent-ffmpeg");
-const ffmpegPath = require("@ffmpeg-installer/win32-x64").path;
-const ffprobePath = require("@ffprobe-installer/win32-x64").path;
+const ffmpegPath = require("ffmpeg-static");
+const ffprobePath = require("ffprobe-static").path;
 const path = require("path");
 const fs = require("fs");
 
