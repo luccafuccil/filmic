@@ -8,10 +8,12 @@ files:
   - electron/**/*
   - public/**/*
   - package.json
+  - node_modules/**/*
 asar: true
 asarUnpack:
   - node_modules/ffmpeg-static/**/*
   - node_modules/ffprobe-static/**/*
+  - node_modules/iconv-lite/**/*
 npmRebuild: false
 buildDependenciesFromSource: false
 

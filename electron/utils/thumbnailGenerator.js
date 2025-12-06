@@ -1,11 +1,29 @@
 const ffmpeg = require("fluent-ffmpeg");
-const ffmpegPath = require("ffmpeg-static");
-const ffprobePath = require("ffprobe-static").path;
 const path = require("path");
 const fs = require("fs");
 
-ffmpeg.setFfmpegPath(ffmpegPath);
-ffmpeg.setFfprobePath(ffprobePath);
+// Função para resolver o caminho correto do ffmpeg quando empacotado
+function getFfmpegPath() {
+  const ffmpegStatic = require("ffmpeg-static");
+  // Em produção (empacotado), o ffmpeg-static retorna um caminho que pode estar no ASAR
+  // Precisamos substituir 'app.asar' por 'app.asar.unpacked' se necessário
+  const finalPath = ffmpegStatic.replace("app.asar", "app.asar.unpacked");
+  console.log("FFmpeg path:", finalPath);
+  console.log("FFmpeg exists:", fs.existsSync(finalPath));
+  return finalPath;
+}
+
+function getFfprobePath() {
+  const ffprobeStatic = require("ffprobe-static");
+  // Mesma lógica para o ffprobe
+  const finalPath = ffprobeStatic.path.replace("app.asar", "app.asar.unpacked");
+  console.log("FFprobe path:", finalPath);
+  console.log("FFprobe exists:", fs.existsSync(finalPath));
+  return finalPath;
+}
+
+ffmpeg.setFfmpegPath(getFfmpegPath());
+ffmpeg.setFfprobePath(getFfprobePath());
 
 async function generateThumbnail(videoPath, outputPath) {
   return new Promise((resolve, reject) => {

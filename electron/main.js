@@ -23,6 +23,7 @@ const {
   handleRemoveWatchProgress,
   handleGetContinueWatching,
 } = require("./handlers/watchProgressHandlers");
+const { registerTmdbHandlers } = require("./handlers/tmdbHandlers");
 
 let mainWindow;
 
@@ -62,8 +63,6 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
 
-  // mainWindow.webContents.openDevTools();
-
   const template = [
     {
       label: "Arquivo",
@@ -87,7 +86,6 @@ function createWindow() {
   Menu.setApplicationMenu(menu);
 }
 
-// Configuração do auto-updater
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
@@ -114,14 +112,45 @@ autoUpdater.on("update-downloaded", () => {
   mainWindow.webContents.send("update:downloaded");
 });
 
-// Handler para instalar update
 ipcMain.on("update:install", () => {
   autoUpdater.quitAndInstall();
 });
 
-// Handler para baixar update
 ipcMain.on("update:download", () => {
   autoUpdater.downloadUpdate();
+});
+
+ipcMain.handle("update:check", async () => {
+  try {
+    if (!app.isPackaged) {
+      return {
+        updateAvailable: false,
+        currentVersion: app.getVersion(),
+        latestVersion: app.getVersion(),
+      };
+    }
+
+    const result = await autoUpdater.checkForUpdates();
+    return {
+      updateAvailable:
+        result &&
+        result.updateInfo &&
+        result.updateInfo.version !== app.getVersion(),
+      currentVersion: app.getVersion(),
+      latestVersion: result?.updateInfo?.version || app.getVersion(),
+    };
+  } catch (error) {
+    console.error("Error checking for updates:", error);
+    return {
+      updateAvailable: false,
+      currentVersion: app.getVersion(),
+      latestVersion: app.getVersion(),
+    };
+  }
+});
+
+ipcMain.handle("update:getVersion", () => {
+  return app.getVersion();
 });
 
 app.whenReady().then(() => {
@@ -142,12 +171,17 @@ app.whenReady().then(() => {
   ipcMain.handle("watch:removeProgress", handleRemoveWatchProgress);
   ipcMain.handle("watch:getContinueWatching", handleGetContinueWatching);
 
+  registerTmdbHandlers();
+
   createWindow();
 
-  // Verificar updates após 3 segundos (dar tempo da janela abrir)
-  setTimeout(() => {
-    autoUpdater.checkForUpdates();
-  }, 3000);
+  if (app.isPackaged) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch((err) => {
+        console.error("Error checking for updates:", err);
+      });
+    }, 3000);
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

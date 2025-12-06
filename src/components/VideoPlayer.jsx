@@ -99,12 +99,22 @@ export function VideoPlayer({
       if (!videoPath) return;
 
       try {
+        console.log("[VideoPlayer] Loading subtitles for:", videoPath);
         const result = await electronAPI.getSubtitles(videoPath);
+        console.log("[VideoPlayer] Subtitle result:", result);
         if (result.success) {
           const parsedSubtitles = parseSRT(result.content);
+          console.log(
+            "[VideoPlayer] Parsed subtitles count:",
+            parsedSubtitles.length
+          );
           setSubtitles(parsedSubtitles);
+        } else {
+          console.log("[VideoPlayer] No subtitles found:", result.error);
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error("[VideoPlayer] Error loading subtitles:", err);
+      }
     }
 
     loadSubtitles();

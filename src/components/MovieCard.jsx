@@ -12,8 +12,35 @@ export function MovieCard({ movie }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoUri, setVideoUri] = useState(null);
   const [videoPath, setVideoPath] = useState(null);
+  const [tmdbData, setTmdbData] = useState({ director: null, overview: null });
+  const [tmdbLoading, setTmdbLoading] = useState(false);
 
   const qualityLabel = getQualityLabel(movie.resolution);
+
+  useEffect(() => {
+    // Fetch TMDB data when component mounts
+    const fetchTmdbData = async () => {
+      if (!movie.title) return;
+
+      setTmdbLoading(true);
+      try {
+        const result = await electronAPI.getMovieMetadata(
+          movie.title,
+          movie.year
+        );
+        if (result.success && result.metadata) {
+          setTmdbData(result.metadata);
+        }
+      } catch (err) {
+        console.error("Error fetching TMDB data:", err);
+        // Silently fail - will just show without director/overview
+      } finally {
+        setTmdbLoading(false);
+      }
+    };
+
+    fetchTmdbData();
+  }, [movie.title, movie.year]);
 
   const handlePlay = async (e) => {
     e.stopPropagation();
@@ -80,6 +107,11 @@ export function MovieCard({ movie }) {
             )}
           </div>
           <h2 className="movie-card-title">{movie.title}</h2>
+          {tmdbData.director && (
+            <div className="movie-card-director">
+              Directed by {tmdbData.director}
+            </div>
+          )}
           <div className="movie-card-info">
             {movie.year && (
               <span className="movie-card-year">{movie.year}</span>
@@ -141,6 +173,12 @@ export function MovieCard({ movie }) {
 
               <h1 className="movie-card-expanded-title">{movie.title}</h1>
 
+              {tmdbData.director && (
+                <div className="movie-card-expanded-director">
+                  Directed by {tmdbData.director}
+                </div>
+              )}
+
               <div className="movie-card-expanded-info-row">
                 {movie.year && (
                   <span className="movie-card-expanded-year">{movie.year}</span>
@@ -155,16 +193,9 @@ export function MovieCard({ movie }) {
                 )}
               </div>
 
-              {movie.files && movie.files.length > 0 && (
-                <div className="movie-card-files">
-                  <h3 className="movie-card-files-title">Arquivos</h3>
-                  <div className="movie-card-files-list">
-                    {movie.files.map((file, idx) => (
-                      <div key={idx} className="movie-card-file-item">
-                        {file.name}
-                      </div>
-                    ))}
-                  </div>
+              {tmdbData.overview && (
+                <div className="movie-card-expanded-overview">
+                  {tmdbData.overview}
                 </div>
               )}
             </div>

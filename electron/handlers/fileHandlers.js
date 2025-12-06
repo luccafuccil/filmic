@@ -3,7 +3,10 @@ const fs = require("fs");
 const path = require("path");
 const iconv = require("iconv-lite");
 const jschardet = require("jschardet");
-const { parseMovieFolderName } = require("../utils/movieParser");
+const {
+  parseMovieFolderName,
+  parseMovieFileName,
+} = require("../utils/movieParser");
 const { getVideoMetadata } = require("../utils/thumbnailGenerator");
 const {
   getCachedMetadata,
@@ -98,95 +101,194 @@ async function handleGetMovies(event, dirPath) {
     const movies = [];
     const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"];
 
-    let processedCount = 0;
-    const totalCount = entries.filter((e) => e.isDirectory()).length;
+    // Separa arquivos de vídeo na raiz e pastas
+    const rootVideoFiles = [];
+    const folders = [];
 
     for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry.name);
+
       if (entry.isDirectory()) {
-        const fullPath = path.join(dirPath, entry.name);
-        const movieInfo = parseMovieFolderName(entry.name);
-
-        const files = await fs.promises.readdir(fullPath, {
-          withFileTypes: true,
-        });
-        const videoFiles = files
-          .filter((file) => !file.isDirectory())
-          .map((file) => ({
-            name: file.name,
-            path: path.join(fullPath, file.name),
-            extension: path.extname(file.name),
-          }));
-
-        const videoFilesOnly = videoFiles.filter((file) =>
-          videoExtensions.includes(file.extension.toLowerCase())
-        );
-
-        let resolution = null;
-        let duration = null;
-
-        if (videoFilesOnly.length > 0) {
-          try {
-            const filesWithSize = await Promise.all(
-              videoFilesOnly.map(async (file) => {
-                const stats = await fs.promises.stat(file.path);
-                return {
-                  ...file,
-                  size: stats.size,
-                };
-              })
-            );
-
-            filesWithSize.sort((a, b) => b.size - a.size);
-            const largestVideo = filesWithSize[0];
-
-            let metadata = getCachedMetadata(largestVideo.path);
-
-            if (!metadata) {
-              const videoMetadata = await getVideoMetadata(largestVideo.path);
-
-              if (videoMetadata && videoMetadata.streams) {
-                const videoStream = videoMetadata.streams.find(
-                  (s) => s.codec_type === "video"
-                );
-
-                if (videoStream) {
-                  resolution = `${videoStream.width}x${videoStream.height}`;
-                }
-
-                if (videoMetadata.format && videoMetadata.format.duration) {
-                  duration = Math.round(videoMetadata.format.duration / 60);
-                }
-              }
-
-              metadata = { resolution, duration };
-              setCachedMetadata(largestVideo.path, metadata);
-            } else {
-              resolution = metadata.resolution;
-              duration = metadata.duration;
-            }
-          } catch (error) {
-            console.error(
-              `Erro ao extrair metadados para ${entry.name}:`,
-              error
-            );
-            // Em caso de erro, resolution e duration permanecem null
-          }
+        folders.push({ name: entry.name, path: fullPath });
+      } else {
+        const extension = path.extname(entry.name).toLowerCase();
+        if (videoExtensions.includes(extension)) {
+          rootVideoFiles.push({
+            name: entry.name,
+            path: fullPath,
+            extension: extension,
+          });
         }
+      }
+    }
 
+    // Calcula total de itens para progresso
+    const totalCount = rootVideoFiles.length + folders.length;
+    let processedCount = 0;
+
+    // Processa arquivos de vídeo na raiz
+    for (const videoFile of rootVideoFiles) {
+      const nameWithoutExt = path.basename(videoFile.name, videoFile.extension);
+      const movieInfo = parseMovieFileName(nameWithoutExt);
+
+      let resolution = null;
+      let duration = null;
+
+      try {
+        const stats = await fs.promises.stat(videoFile.path);
+
+        let metadata = getCachedMetadata(videoFile.path);
+
+        if (!metadata) {
+          const videoMetadata = await getVideoMetadata(videoFile.path);
+
+          if (videoMetadata && videoMetadata.streams) {
+            const videoStream = videoMetadata.streams.find(
+              (s) => s.codec_type === "video"
+            );
+
+            if (videoStream) {
+              resolution = `${videoStream.width}x${videoStream.height}`;
+            }
+
+            if (videoMetadata.format && videoMetadata.format.duration) {
+              duration = Math.round(videoMetadata.format.duration / 60);
+            }
+          }
+
+          metadata = { resolution, duration };
+          setCachedMetadata(videoFile.path, metadata);
+        } else {
+          resolution = metadata.resolution;
+          duration = metadata.duration;
+        }
+      } catch (error) {
+        console.error(
+          `Erro ao extrair metadados para ${videoFile.name}:`,
+          error
+        );
+      }
+
+      processedCount++;
+      event.sender.send("movies:progress", {
+        current: processedCount,
+        total: totalCount,
+      });
+
+      movies.push({
+        ...movieInfo,
+        path: videoFile.path,
+        files: [videoFile],
+        resolution,
+        duration,
+        isRootVideo: true,
+      });
+    }
+
+    // Processa pastas
+    for (const folder of folders) {
+      const files = await fs.promises.readdir(folder.path, {
+        withFileTypes: true,
+      });
+      const videoFiles = files
+        .filter((file) => !file.isDirectory())
+        .map((file) => ({
+          name: file.name,
+          path: path.join(folder.path, file.name),
+          extension: path.extname(file.name),
+        }));
+
+      const videoFilesOnly = videoFiles.filter((file) =>
+        videoExtensions.includes(file.extension.toLowerCase())
+      );
+
+      // Se não houver vídeos, pula a pasta
+      if (videoFilesOnly.length === 0) {
         processedCount++;
         event.sender.send("movies:progress", {
           current: processedCount,
           total: totalCount,
         });
-
-        movies.push({
-          ...movieInfo,
-          path: fullPath,
-          files: videoFiles,
-          resolution,
-          duration,
-        });
+        continue;
       }
+
+      let resolution = null;
+      let duration = null;
+
+      // Prioriza o nome da pasta para identificação do filme
+      let movieInfo = parseMovieFileName(folder.name);
+
+      try {
+        const filesWithSize = await Promise.all(
+          videoFilesOnly.map(async (file) => {
+            const stats = await fs.promises.stat(file.path);
+            return {
+              ...file,
+              size: stats.size,
+            };
+          })
+        );
+
+        filesWithSize.sort((a, b) => b.size - a.size);
+        const largestVideo = filesWithSize[0];
+
+        // Se o nome da pasta não foi identificado corretamente, tenta usar o nome do arquivo
+        if (!movieInfo.parsed) {
+          const nameWithoutExt = path.basename(
+            largestVideo.name,
+            largestVideo.extension
+          );
+          const fileBasedInfo = parseMovieFileName(nameWithoutExt);
+
+          // Só usa o nome do arquivo se ele foi identificado com sucesso
+          if (fileBasedInfo.parsed) {
+            movieInfo = fileBasedInfo;
+          }
+        }
+
+        let metadata = getCachedMetadata(largestVideo.path);
+
+        if (!metadata) {
+          const videoMetadata = await getVideoMetadata(largestVideo.path);
+
+          if (videoMetadata && videoMetadata.streams) {
+            const videoStream = videoMetadata.streams.find(
+              (s) => s.codec_type === "video"
+            );
+
+            if (videoStream) {
+              resolution = `${videoStream.width}x${videoStream.height}`;
+            }
+
+            if (videoMetadata.format && videoMetadata.format.duration) {
+              duration = Math.round(videoMetadata.format.duration / 60);
+            }
+          }
+
+          metadata = { resolution, duration };
+          setCachedMetadata(largestVideo.path, metadata);
+        } else {
+          resolution = metadata.resolution;
+          duration = metadata.duration;
+        }
+      } catch (error) {
+        console.error(`Erro ao extrair metadados para ${folder.name}:`, error);
+      }
+
+      processedCount++;
+      event.sender.send("movies:progress", {
+        current: processedCount,
+        total: totalCount,
+      });
+
+      movies.push({
+        ...movieInfo,
+        path: folder.path,
+        files: videoFiles,
+        resolution,
+        duration,
+        isRootVideo: false,
+      });
     }
 
     return { success: true, data: movies };
@@ -236,13 +338,17 @@ async function handleGetVideoFile(event, movie) {
 
 async function handleGetSubtitles(event, videoPath) {
   try {
+    console.log("[SUBTITLE] Attempting to load subtitles for:", videoPath);
     const basePath = videoPath.replace(/\.[^.]+$/, "");
     const srtPath = basePath + ".srt";
+    console.log("[SUBTITLE] Looking for .srt at:", srtPath);
 
     try {
       await fs.promises.access(srtPath);
+      console.log("[SUBTITLE] .srt file found!");
 
       const buffer = await fs.promises.readFile(srtPath);
+      console.log("[SUBTITLE] File read, buffer size:", buffer.length);
 
       const encodingsToTry = [
         "windows-1252",
@@ -275,7 +381,14 @@ async function handleGetSubtitles(event, videoPath) {
             bestContent = decoded;
             bestEncoding = encoding;
           }
-        } catch (e) {}
+        } catch (e) {
+          console.log(
+            "[SUBTITLE] Failed to decode with",
+            encoding,
+            ":",
+            e.message
+          );
+        }
       }
 
       if (!bestContent) {
@@ -283,11 +396,15 @@ async function handleGetSubtitles(event, videoPath) {
         bestEncoding = "windows-1252";
       }
 
+      console.log("[SUBTITLE] Best encoding found:", bestEncoding);
+      console.log("[SUBTITLE] Content length:", bestContent.length);
       return { success: true, content: bestContent, path: srtPath };
     } catch {
+      console.log("[SUBTITLE] .srt file not found");
       return { success: false, error: "Nenhuma legenda encontrada" };
     }
   } catch (error) {
+    console.error("[SUBTITLE] Error:", error);
     return { success: false, error: error.message };
   }
 }

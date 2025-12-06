@@ -38,13 +38,13 @@ contextBridge.exposeInMainWorld("fileAPI", {
 
   onMenuChangeFolder: (callback) => {
     ipcRenderer.on("menu:changeFolder", callback);
-    // Retornar função de cleanup
+
     return () => ipcRenderer.removeListener("menu:changeFolder", callback);
   },
 
   onMoviesProgress: (callback) => {
     ipcRenderer.on("movies:progress", (event, data) => callback(data));
-    // Retornar função de cleanup
+
     return () => ipcRenderer.removeAllListeners("movies:progress");
   },
 
@@ -61,11 +61,34 @@ contextBridge.exposeInMainWorld("fileAPI", {
 
   onWatchProgressUpdated: (callback) => {
     ipcRenderer.on("watch-progress-updated", callback);
-    // Retornar função de cleanup
+
     return () => ipcRenderer.removeListener("watch-progress-updated", callback);
   },
 
   minimizeWindow: () => ipcRenderer.send("window:minimize"),
   maximizeWindow: () => ipcRenderer.send("window:maximize"),
   closeWindow: () => ipcRenderer.send("window:close"),
+
+  getMovieMetadata: (title, year) =>
+    ipcRenderer.invoke("tmdb:getMovieMetadata", title, year),
+
+  checkForUpdates: () => ipcRenderer.invoke("update:check"),
+  downloadUpdate: () => ipcRenderer.send("update:download"),
+  installUpdate: () => ipcRenderer.send("update:install"),
+  getAppVersion: () => ipcRenderer.invoke("update:getVersion"),
+
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on("update:available", (event, info) => callback(info));
+    return () => ipcRenderer.removeListener("update:available", callback);
+  },
+
+  onUpdateProgress: (callback) => {
+    ipcRenderer.on("update:progress", (event, progress) => callback(progress));
+    return () => ipcRenderer.removeListener("update:progress", callback);
+  },
+
+  onUpdateDownloaded: (callback) => {
+    ipcRenderer.on("update:downloaded", (event, info) => callback(info));
+    return () => ipcRenderer.removeListener("update:downloaded", callback);
+  },
 });

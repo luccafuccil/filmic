@@ -4,6 +4,7 @@ import { TitleBar } from "./components/TitleBar";
 import { SplashScreen } from "./components/SplashScreen";
 import { ContinueWatchingSection } from "./components/ContinueWatchingSection";
 import { Settings } from "./components/Settings";
+import { UpdateModal } from "./components/UpdateModal";
 import { useEffect, useState, useMemo } from "react";
 import { electronAPI } from "./services/electronAPI";
 import "./styles/components/App.css";
@@ -24,6 +25,12 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState({
+    updateAvailable: false,
+    currentVersion: "1.0.0",
+    latestVersion: null,
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -73,6 +80,43 @@ function App() {
 
     return cleanup;
   }, [changeFolder]);
+
+  // Verificar updates ao iniciar
+  useEffect(() => {
+    const checkUpdates = async () => {
+      try {
+        const result = await electronAPI.checkForUpdates();
+        setUpdateInfo(result);
+      } catch (error) {
+        console.error("Error checking for updates:", error);
+      }
+    };
+
+    // Verificar após 5 segundos
+    const timer = setTimeout(checkUpdates, 5000);
+
+    // Listener para quando uma atualização estiver disponível
+    const cleanupUpdateAvailable = electronAPI.onUpdateAvailable?.((info) => {
+      setUpdateInfo((prev) => ({
+        ...prev,
+        updateAvailable: true,
+        latestVersion: info.version,
+      }));
+    });
+
+    return () => {
+      clearTimeout(timer);
+      cleanupUpdateAvailable?.();
+    };
+  }, []);
+
+  const handleUpdateClick = () => {
+    setShowUpdateModal(true);
+  };
+
+  const handleDownloadUpdate = async () => {
+    electronAPI.downloadUpdate();
+  };
 
   if (showSplash) {
     return <SplashScreen />;
@@ -151,6 +195,8 @@ function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onSettingsClick={() => setShowSettings(true)}
+        onUpdateClick={handleUpdateClick}
+        hasUpdate={updateInfo.updateAvailable}
       />
       <Settings
         isOpen={showSettings}
@@ -159,6 +205,12 @@ function App() {
           changeFolder();
           setShowSettings(false);
         }}
+      />
+      <UpdateModal
+        isOpen={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+        updateInfo={updateInfo}
+        onUpdate={handleDownloadUpdate}
       />
       {loading && (
         <div className="app-loading">

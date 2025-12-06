@@ -55,19 +55,27 @@ function findLargestVideoFile(files) {
 
 async function handleGenerateThumbnail(event, movie) {
   try {
+    console.log("=== Iniciando geração de thumbnail ===");
+    console.log("Movie:", movie.title);
+
     if (!movie || !movie.files || movie.files.length === 0) {
+      console.error("Nenhum arquivo de vídeo encontrado");
       return { success: false, error: "Nenhum arquivo de vídeo encontrado" };
     }
 
     const videoFile = findLargestVideoFile(movie.files);
     if (!videoFile) {
+      console.error("Nenhum arquivo de vídeo válido encontrado");
       return {
         success: false,
         error: "Nenhum arquivo de vídeo válido encontrado",
       };
     }
 
+    console.log("Video file:", videoFile.path);
+
     if (!fs.existsSync(videoFile.path)) {
+      console.error("Arquivo de vídeo não existe:", videoFile.path);
       return { success: false, error: "Arquivo de vídeo não encontrado" };
     }
 
@@ -75,7 +83,11 @@ async function handleGenerateThumbnail(event, movie) {
     const thumbnailsDir = getThumbnailsDir();
     const thumbnailPath = path.join(thumbnailsDir, `${videoHash}.jpg`);
 
+    console.log("Thumbnail path:", thumbnailPath);
+    console.log("Thumbnail já existe?", fs.existsSync(thumbnailPath));
+
     if (fs.existsSync(thumbnailPath)) {
+      console.log("Usando thumbnail do cache");
       return {
         success: true,
         thumbnailPath,
@@ -83,7 +95,9 @@ async function handleGenerateThumbnail(event, movie) {
       };
     }
 
+    console.log("Gerando novo thumbnail...");
     await generateThumbnail(videoFile.path, thumbnailPath);
+    console.log("Thumbnail gerado com sucesso!");
 
     return {
       success: true,
@@ -91,6 +105,7 @@ async function handleGenerateThumbnail(event, movie) {
       cached: false,
     };
   } catch (error) {
+    console.error("Erro ao gerar thumbnail:", error);
     return {
       success: false,
       error: error.message,

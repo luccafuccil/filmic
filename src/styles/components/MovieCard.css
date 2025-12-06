@@ -124,6 +124,16 @@
   font-size: 56px;
 }
 
+.movie-card-director {
+  margin: 8px 0 0 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 16px;
+  font-weight: 400;
+  font-style: italic;
+  text-align: left;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
+}
+
 .movie-card-info {
   display: flex;
   align-items: center;
@@ -283,6 +293,18 @@
   line-height: 1.1;
   text-align: left;
   text-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+  max-width: 50vw;
+  word-wrap: break-word;
+}
+
+.movie-card-expanded-director {
+  margin: 8px 0 16px 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+  font-weight: 400;
+  font-style: italic;
+  text-align: left;
+  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.8);
 }
 
 .movie-card-expanded-info-row {
@@ -303,6 +325,18 @@
 .movie-card-expanded-separator {
   color: rgba(255, 255, 255, 0.5);
   font-size: 28px;
+}
+
+.movie-card-expanded-overview {
+  margin: 24px 0 0 0;
+  padding: 20px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 800px;
+  text-align: left;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
 }
 
 .movie-card-files {

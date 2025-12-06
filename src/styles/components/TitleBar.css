@@ -96,12 +96,7 @@
   transform: scale(0.95);
 }
 
-.titlebar-controls {
-  display: flex;
-  height: 100%;
-  -webkit-app-region: no-drag;
-}
-
+.titlebar-update-button,
 .titlebar-settings-button {
   width: 46px;
   height: 52px;
@@ -115,15 +110,25 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0;
   -webkit-app-region: no-drag;
+  position: relative;
 }
 
+.titlebar-update-button:hover,
 .titlebar-settings-button:hover {
   background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 1);
 }
 
+.titlebar-update-button:active,
 .titlebar-settings-button:active {
   background: rgba(255, 255, 255, 0.15);
+  transform: scale(0.95);
+}
+
+.titlebar-controls {
+  display: flex;
+  height: 100%;
+  -webkit-app-region: no-drag;
 }
 
 .titlebar-button {

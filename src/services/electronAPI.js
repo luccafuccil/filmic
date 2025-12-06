@@ -25,4 +25,14 @@ export const electronAPI = {
   minimizeWindow: () => fileAPI.minimizeWindow(),
   maximizeWindow: () => fileAPI.maximizeWindow(),
   closeWindow: () => fileAPI.closeWindow(),
+  getMovieMetadata: (title, year) => fileAPI.getMovieMetadata(title, year),
+
+  // Update API
+  checkForUpdates: () => fileAPI.checkForUpdates(),
+  downloadUpdate: () => fileAPI.downloadUpdate(),
+  installUpdate: () => fileAPI.installUpdate(),
+  getAppVersion: () => fileAPI.getAppVersion(),
+  onUpdateAvailable: (callback) => fileAPI.onUpdateAvailable(callback),
+  onUpdateProgress: (callback) => fileAPI.onUpdateProgress(callback),
+  onUpdateDownloaded: (callback) => fileAPI.onUpdateDownloaded(callback),
 };
