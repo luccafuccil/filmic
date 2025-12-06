@@ -25,6 +25,10 @@ const {
 } = require("./handlers/watchProgressHandlers");
 const { registerTmdbHandlers } = require("./handlers/tmdbHandlers");
 
+const resourcePath = app.isPackaged
+  ? process.resourcesPath
+  : path.join(__dirname, "..");
+
 let mainWindow;
 
 ipcMain.on("window:minimize", () => {
@@ -55,7 +59,7 @@ function createWindow() {
     height: 800,
     frame: false,
     backgroundColor: "#1a1a1a",
-    icon: path.join(__dirname, "../public/icon.ico"),
+    icon: path.join(resourcePath, "public/icon.ico"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
