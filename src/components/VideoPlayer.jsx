@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import videojs from "video.js";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { electronAPI } from "../services/electronAPI";
 import { formatTime } from "../utils/movieHelpers";
@@ -10,28 +11,221 @@ export function VideoPlayer({
   movieId,
   movieTitle,
   videoPath,
+  mediaType,
+  showInfo,
 }) {
   const videoRef = useRef(null);
+  const playerRef = useRef(null);
   const containerRef = useRef(null);
-  const progressBarRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [isSeeking, setIsSeeking] = useState(false);
   const [subtitles, setSubtitles] = useState([]);
   const [currentSubtitle, setCurrentSubtitle] = useState("");
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [hasAudio, setHasAudio] = useState(true);
   const [showAudioWarning, setShowAudioWarning] = useState(false);
+  const [hasHardcodedSubs, setHasHardcodedSubs] = useState(false);
+  const [useHardcodedSubs, setUseHardcodedSubs] = useState(false);
+  const [internalSubtitles, setInternalSubtitles] = useState([]);
+  const [isLoadingSubtitles, setIsLoadingSubtitles] = useState(false);
+  const [activeTrackIndex, setActiveTrackIndex] = useState(-1);
+  const [showUpNext, setShowUpNext] = useState(false);
+  const [upNextCountdown, setUpNextCountdown] = useState(10);
+  const [nextEpisode, setNextEpisode] = useState(null);
 
   const currentTimeRef = useRef(0);
   const durationRef = useRef(0);
+  const upNextTimeoutRef = useRef(null);
+  const upNextIntervalRef = useRef(null);
+
+  useEffect(() => {
+    // Adicionar traduções em português para o video.js
+    try {
+      if (videojs && videojs.addLanguage) {
+        videojs.addLanguage("pt-BR", {
+          Subtitles: "Legendas",
+          "subtitles off": "legendas desativadas",
+          Captions: "Legendas",
+          "captions off": "legendas desativadas",
+          Play: "Reproduzir",
+          Pause: "Pausar",
+          Mute: "Silenciar",
+          Unmute: "Ativar som",
+          Fullscreen: "Tela cheia",
+          "Non-Fullscreen": "Sair da tela cheia",
+          "Picture-in-Picture": "Picture-in-Picture",
+          "Exit Picture-in-Picture": "Sair do Picture-in-Picture",
+          "Playback Rate": "Velocidade",
+          Speed: "Velocidade",
+          "Current Time": "Tempo atual",
+          Duration: "Duração",
+          "Remaining Time": "Tempo restante",
+          "Volume Level": "Nível de volume",
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to add video.js translations:", err);
+    }
+
+    if (!playerRef.current) {
+      const videoElement = document.createElement("video-js");
+
+      videoElement.classList.add("vjs-big-play-centered");
+      videoElement.classList.add("vjs-filmic");
+      videoRef.current.appendChild(videoElement);
+
+      const player = (playerRef.current = videojs(
+        videoElement,
+        {
+          controls: true,
+          autoplay: true,
+          preload: "auto",
+          language: "pt-BR",
+          width: window.innerWidth,
+          height: window.innerHeight,
+          playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
+          sources: [
+            {
+              src: videoUri,
+              type: "video/mp4",
+            },
+          ],
+          controlBar: {
+            children: [
+              "playToggle",
+              "volumePanel",
+              "currentTimeDisplay",
+              "timeDivider",
+              "durationDisplay",
+              "progressControl",
+              "playbackRateMenuButton",
+              "subtitlesButton",
+              "fullscreenToggle",
+            ],
+          },
+          textTrackSettings: true,
+          html5: {
+            nativeTextTracks: false,
+          },
+        },
+        () => {
+          console.log("[VideoPlayer] Player is ready");
+
+          player.on("play", () => setIsPlaying(true));
+          player.on("pause", () => setIsPlaying(false));
+          player.on("timeupdate", () => {
+            setCurrentTime(player.currentTime());
+          });
+          player.on("loadedmetadata", () => {
+            setDuration(player.duration());
+            console.log("[VideoPlayer] Metadata loaded");
+
+            setTimeout(() => {
+              const tech = player.tech();
+              if (tech && tech.el_) {
+                const hasAudioTracks =
+                  tech.el_.audioTracks?.length > 0 ||
+                  tech.el_.webkitAudioDecodedByteCount > 0 ||
+                  tech.el_.mozHasAudio;
+                setHasAudio(hasAudioTracks);
+                if (!hasAudioTracks) {
+                  setShowAudioWarning(true);
+                }
+              }
+            }, 1000);
+          });
+
+          player.on("loadeddata", () => {
+            console.log("[VideoPlayer] Data loaded, checking text tracks");
+            const textTracks = player.textTracks();
+            console.log("[VideoPlayer] Text tracks found:", textTracks.length);
+
+            if (textTracks && textTracks.length > 0) {
+              const tracks = [];
+              for (let i = 0; i < textTracks.length; i++) {
+                const track = textTracks[i];
+                console.log(`[VideoPlayer] Track ${i}:`, {
+                  kind: track.kind,
+                  label: track.label,
+                  language: track.language,
+                  mode: track.mode,
+                });
+
+                if (track.kind === "subtitles" || track.kind === "captions") {
+                  tracks.push({
+                    kind: track.kind,
+                    label: track.label || `Legenda ${i + 1}`,
+                    language: track.language,
+                    id: track.id || `track-${i}`,
+                    index: i,
+                  });
+                }
+              }
+
+              if (tracks.length > 0) {
+                console.log(
+                  "[VideoPlayer] Internal subtitle tracks found:",
+                  tracks
+                );
+                setHasHardcodedSubs(true);
+              }
+            }
+          });
+
+          player.textTracks().addEventListener("addtrack", (e) => {
+            console.log("[VideoPlayer] Track added:", e.track);
+            const textTracks = player.textTracks();
+            const tracks = [];
+            for (let i = 0; i < textTracks.length; i++) {
+              const track = textTracks[i];
+              if (track.kind === "subtitles" || track.kind === "captions") {
+                tracks.push({
+                  kind: track.kind,
+                  label: track.label || `Legenda ${i + 1}`,
+                  language: track.language,
+                  id: track.id || `track-${i}`,
+                  index: i,
+                });
+              }
+            }
+            if (tracks.length > 0) {
+              setHasHardcodedSubs(true);
+            }
+          });
+
+          electronAPI.getWatchProgress(movieId).then((progress) => {
+            if (progress) {
+              player.currentTime(progress.time);
+            }
+          });
+        }
+      ));
+    } else {
+      const player = playerRef.current;
+      player.src([
+        {
+          src: videoUri,
+          type: "video/mp4",
+        },
+      ]);
+    }
+  }, [videoUri, movieId]);
+
+  useEffect(() => {
+    const player = playerRef.current;
+
+    return () => {
+      if (player && !player.isDisposed()) {
+        player.dispose();
+        playerRef.current = null;
+      }
+    };
+  }, [playerRef]);
 
   useEffect(() => {
     currentTimeRef.current = currentTime;
@@ -53,67 +247,230 @@ export function VideoPlayer({
   }, []);
 
   useEffect(() => {
-    const loadProgress = async () => {
-      const progress = await electronAPI.getWatchProgress(movieId);
-      if (progress && videoRef.current) {
-        videoRef.current.currentTime = progress.time;
-      }
-    };
-    loadProgress();
-  }, [movieId]);
-
-  useEffect(() => {
     const interval = setInterval(async () => {
       const time = currentTimeRef.current;
       const dur = durationRef.current;
 
-      if (videoRef.current && dur > 0) {
+      if (playerRef.current && dur > 0) {
         const percentage = (time / dur) * 100;
 
         if (percentage >= 95) {
-          await electronAPI.removeWatchProgress(movieId);
+          // For TV shows, trigger Up Next overlay
+          if (mediaType === "tvshow" && showInfo && !showUpNext) {
+            const nextEp = await electronAPI.findNextEpisode(
+              showInfo.title,
+              showInfo.year,
+              showInfo.allEpisodes
+            );
+
+            if (nextEp) {
+              setNextEpisode(nextEp);
+              setShowUpNext(true);
+              setUpNextCountdown(10);
+
+              // Start countdown
+              upNextIntervalRef.current = setInterval(() => {
+                setUpNextCountdown((prev) => {
+                  if (prev <= 1) {
+                    playNextEpisode(nextEp);
+                    return 0;
+                  }
+                  return prev - 1;
+                });
+              }, 1000);
+            }
+          }
+
+          // Remove progress for movies or completed episodes
+          if (mediaType === "movie") {
+            await electronAPI.removeWatchProgress(movieId);
+          } else if (mediaType === "tvshow") {
+            await electronAPI.removeWatchProgress(movieId);
+          }
         } else {
           const progress = {
             time: time,
             duration: dur,
             percentage: percentage,
           };
-          await electronAPI.saveWatchProgress(movieId, progress);
+
+          if (mediaType === "movie") {
+            await electronAPI.saveWatchProgress(movieId, progress);
+          } else if (mediaType === "tvshow" && showInfo) {
+            await electronAPI.saveEpisodeProgress(
+              showInfo.title,
+              showInfo.year,
+              showInfo.season,
+              showInfo.episode,
+              progress
+            );
+          }
         }
       }
     }, 5000);
 
-    return () => clearInterval(interval);
-  }, [movieId]);
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.volume = volume;
-      videoRef.current.muted = false;
-      videoRef.current.play().catch(() => {});
-    }
-  }, []);
+    return () => {
+      clearInterval(interval);
+      if (upNextIntervalRef.current) {
+        clearInterval(upNextIntervalRef.current);
+      }
+    };
+  }, [movieId, mediaType, showInfo, showUpNext]);
 
   useEffect(() => {
     async function loadSubtitles() {
-      if (!videoPath) return;
+      if (!videoPath || !playerRef.current) return;
 
       try {
+        setIsLoadingSubtitles(true);
         console.log("[VideoPlayer] Loading subtitles for:", videoPath);
         const result = await electronAPI.getSubtitles(videoPath);
         console.log("[VideoPlayer] Subtitle result:", result);
+
         if (result.success) {
-          const parsedSubtitles = parseSRT(result.content);
-          console.log(
-            "[VideoPlayer] Parsed subtitles count:",
-            parsedSubtitles.length
-          );
-          setSubtitles(parsedSubtitles);
+          const player = playerRef.current;
+
+          if (result.type === "internal") {
+            console.log(
+              "[VideoPlayer] Found internal subtitles:",
+              result.tracks
+            );
+            setInternalSubtitles(result.tracks);
+
+            let extractedContent = [];
+
+            if (result.cached && result.extractedContent) {
+              console.log("[VideoPlayer] Using cached subtitle content");
+              extractedContent = result.extractedContent;
+            } else {
+              console.log("[VideoPlayer] Extracting subtitle tracks...");
+              for (let i = 0; i < result.tracks.length; i++) {
+                const track = result.tracks[i];
+                console.log(`[VideoPlayer] Extracting track ${i}:`, track);
+
+                try {
+                  const extractResult = await electronAPI.extractSubtitleTrack(
+                    result.videoPath,
+                    track.index
+                  );
+
+                  if (extractResult.success) {
+                    console.log(
+                      `[VideoPlayer] Successfully extracted track ${i}`
+                    );
+                    extractedContent.push({
+                      trackIndex: track.index,
+                      content: extractResult.content,
+                    });
+                  } else {
+                    console.error(
+                      `[VideoPlayer] Failed to extract track ${i}:`,
+                      extractResult.error
+                    );
+                  }
+                } catch (err) {
+                  console.error(
+                    `[VideoPlayer] Error extracting track ${i}:`,
+                    err
+                  );
+                }
+              }
+
+              if (extractedContent.length > 0) {
+                await electronAPI.cacheSubtitles(
+                  result.videoPath,
+                  result.tracks,
+                  extractedContent
+                );
+              }
+            }
+
+            for (let i = 0; i < extractedContent.length; i++) {
+              const extracted = extractedContent[i];
+              const track = result.tracks.find(
+                (t) => t.index === extracted.trackIndex
+              );
+
+              if (track && extracted.content) {
+                const vttContent = convertSRTtoVTT(extracted.content);
+                const blob = new Blob([vttContent], { type: "text/vtt" });
+                const url = URL.createObjectURL(blob);
+
+                console.log(`[VideoPlayer] Adding track ${i}:`, {
+                  label: track.title,
+                  language: track.language,
+                  default: i === 0,
+                });
+
+                const addedTrack = player.addRemoteTextTrack(
+                  {
+                    kind: "subtitles",
+                    src: url,
+                    srclang: track.language || "und",
+                    label: track.title || `Legenda ${i + 1}`,
+                    default: i === 0,
+                  },
+                  false
+                );
+
+                console.log(
+                  `[VideoPlayer] Track ${i} added, element:`,
+                  addedTrack
+                );
+
+                if (i === 0) {
+                  setActiveTrackIndex(0);
+                }
+              }
+            }
+
+            setTimeout(() => {
+              const allTracks = player.textTracks();
+              console.log(
+                `[VideoPlayer] Total tracks after loading: ${allTracks.length}`
+              );
+              for (let i = 0; i < allTracks.length; i++) {
+                console.log(`[VideoPlayer] Track ${i}:`, {
+                  label: allTracks[i].label,
+                  language: allTracks[i].language,
+                  mode: allTracks[i].mode,
+                });
+              }
+            }, 500);
+          } else if (result.type === "external") {
+            const parsedSubtitles = parseSRT(result.content);
+            console.log(
+              "[VideoPlayer] Parsed external subtitles count:",
+              parsedSubtitles.length
+            );
+            setSubtitles(parsedSubtitles);
+
+            if (player && result.path) {
+              const vttContent = convertSRTtoVTT(result.content);
+              const blob = new Blob([vttContent], { type: "text/vtt" });
+              const url = URL.createObjectURL(blob);
+
+              player.addRemoteTextTrack(
+                {
+                  kind: "subtitles",
+                  src: url,
+                  srclang: "pt",
+                  label: "Português (Externo)",
+                  default: true,
+                },
+                false
+              );
+
+              setActiveTrackIndex(0);
+            }
+          }
         } else {
           console.log("[VideoPlayer] No subtitles found:", result.error);
         }
       } catch (err) {
         console.error("[VideoPlayer] Error loading subtitles:", err);
+      } finally {
+        setIsLoadingSubtitles(false);
       }
     }
 
@@ -121,7 +478,10 @@ export function VideoPlayer({
   }, [videoPath]);
 
   useEffect(() => {
-    if (subtitles.length > 0 && showSubtitles) {
+    const shouldShowCustom =
+      subtitles.length > 0 && showSubtitles && activeTrackIndex === -1;
+
+    if (shouldShowCustom) {
       const current = subtitles.find(
         (sub) => currentTime >= sub.start && currentTime <= sub.end
       );
@@ -129,7 +489,27 @@ export function VideoPlayer({
     } else {
       setCurrentSubtitle("");
     }
-  }, [currentTime, subtitles, showSubtitles]);
+  }, [currentTime, subtitles, showSubtitles, activeTrackIndex]);
+
+  const convertSRTtoVTT = (srtText) => {
+    let vtt = "WEBVTT\n\n";
+    const blocks = srtText.trim().split(/\n\s*\n/);
+
+    blocks.forEach((block) => {
+      const lines = block.split("\n");
+      if (lines.length >= 3) {
+        const timeLine = lines[1];
+        const textLines = lines.slice(2);
+
+        const vttTimeLine = timeLine.replace(/,/g, ".");
+        const text = textLines.join("\n");
+
+        vtt += `${vttTimeLine}\n${text}\n\n`;
+      }
+    });
+
+    return vtt;
+  };
 
   const parseSRT = (srtText) => {
     const subtitles = [];
@@ -176,56 +556,103 @@ export function VideoPlayer({
     return subtitles;
   };
 
-  const handlePlayPause = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
+  const playNextEpisode = async (episode) => {
+    try {
+      // Clean up current player
+      if (playerRef.current) {
+        playerRef.current.dispose();
+        playerRef.current = null;
       }
-      setIsPlaying(!isPlaying);
+
+      // Get next episode video file
+      const result = await electronAPI.getEpisodeVideoFile(
+        showInfo.title,
+        episode.seasonNumber,
+        episode.episodeNumber
+      );
+
+      if (result.success) {
+        // Update showInfo with new current episode
+        const updatedShowInfo = {
+          ...showInfo,
+          currentEpisode: episode,
+        };
+
+        // Close current player and reopen with new episode
+        onClose();
+
+        // Trigger play of next episode through parent component
+        // This requires the parent to handle this event
+        window.dispatchEvent(
+          new CustomEvent("playNextEpisode", {
+            detail: {
+              videoUri: result.videoUri,
+              videoPath: result.videoPath,
+              episode,
+              showInfo: updatedShowInfo,
+            },
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Error playing next episode:", error);
+    }
+  };
+
+  const handleCancelUpNext = () => {
+    setShowUpNext(false);
+    if (upNextIntervalRef.current) {
+      clearInterval(upNextIntervalRef.current);
+    }
+  };
+
+  const handlePlayPause = () => {
+    if (playerRef.current) {
+      if (isPlaying) {
+        playerRef.current.pause();
+      } else {
+        playerRef.current.play();
+      }
     }
   };
 
   const handleSeekForward = (seconds) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = Math.min(
-        videoRef.current.currentTime + seconds,
+    if (playerRef.current) {
+      const newTime = Math.min(
+        playerRef.current.currentTime() + seconds,
         duration
       );
+      playerRef.current.currentTime(newTime);
     }
   };
 
   const handleSeekBackward = (seconds) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = Math.max(
-        videoRef.current.currentTime - seconds,
-        0
-      );
+    if (playerRef.current) {
+      const newTime = Math.max(playerRef.current.currentTime() - seconds, 0);
+      playerRef.current.currentTime(newTime);
     }
   };
 
   const handleVolumeUp = (amount) => {
-    if (videoRef.current) {
-      const newVolume = Math.min(volume + amount, 1);
-      setVolume(newVolume);
-      videoRef.current.volume = newVolume;
-      if (isMuted) setIsMuted(false);
+    if (playerRef.current) {
+      const newVolume = Math.min(playerRef.current.volume() + amount, 1);
+      playerRef.current.volume(newVolume);
+      if (playerRef.current.muted()) {
+        playerRef.current.muted(false);
+      }
     }
   };
 
   const handleVolumeDown = (amount) => {
-    if (videoRef.current) {
-      const newVolume = Math.max(volume - amount, 0);
-      setVolume(newVolume);
-      videoRef.current.volume = newVolume;
+    if (playerRef.current) {
+      const newVolume = Math.max(playerRef.current.volume() - amount, 0);
+      playerRef.current.volume(newVolume);
     }
   };
 
   const handleToggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+    if (playerRef.current) {
+      playerRef.current.muted(!playerRef.current.muted());
     }
   };
 
@@ -242,7 +669,40 @@ export function VideoPlayer({
   };
 
   const handleToggleSubtitles = () => {
-    setShowSubtitles(!showSubtitles);
+    if (playerRef.current) {
+      const player = playerRef.current;
+      const tracks = player.textTracks();
+
+      if (tracks.length > 0) {
+        let anyShowing = false;
+        let firstShowingIndex = -1;
+        for (let i = 0; i < tracks.length; i++) {
+          if (tracks[i].mode === "showing") {
+            anyShowing = true;
+            if (firstShowingIndex === -1) firstShowingIndex = i;
+          }
+        }
+
+        if (anyShowing) {
+          for (let i = 0; i < tracks.length; i++) {
+            tracks[i].mode = "hidden";
+          }
+          setShowSubtitles(false);
+          setActiveTrackIndex(-1);
+          setCurrentSubtitle("");
+        } else {
+          tracks[0].mode = "showing";
+          setShowSubtitles(true);
+          setActiveTrackIndex(0);
+        }
+      } else {
+        const newState = !showSubtitles;
+        setShowSubtitles(newState);
+        if (!newState) {
+          setCurrentSubtitle("");
+        }
+      }
+    }
   };
 
   const handleOpenExternal = async () => {
@@ -264,72 +724,6 @@ export function VideoPlayer({
     onClose: onClose,
     enabled: true,
   });
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current && !isSeeking) {
-      setCurrentTime(videoRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      setDuration(videoRef.current.duration);
-
-      setTimeout(() => {
-        if (videoRef.current) {
-          const hasAudioTracks =
-            videoRef.current.audioTracks?.length > 0 ||
-            videoRef.current.webkitAudioDecodedByteCount > 0 ||
-            videoRef.current.mozHasAudio;
-          setHasAudio(hasAudioTracks);
-          if (!hasAudioTracks) {
-            setShowAudioWarning(true);
-          }
-        }
-      }, 1000);
-    }
-  };
-
-  const handlePlay = () => setIsPlaying(true);
-  const handlePause = () => setIsPlaying(false);
-
-  const handleProgressClick = (e) => {
-    if (progressBarRef.current && videoRef.current) {
-      const rect = progressBarRef.current.getBoundingClientRect();
-      const pos = (e.clientX - rect.left) / rect.width;
-      videoRef.current.currentTime = pos * duration;
-    }
-  };
-
-  const handleProgressMouseDown = () => {
-    setIsSeeking(true);
-  };
-
-  const handleProgressMouseMove = (e) => {
-    if (isSeeking && progressBarRef.current && videoRef.current) {
-      const rect = progressBarRef.current.getBoundingClientRect();
-      const pos = (e.clientX - rect.left) / rect.width;
-      videoRef.current.currentTime = Math.max(
-        0,
-        Math.min(pos * duration, duration)
-      );
-    }
-  };
-
-  const handleProgressMouseUp = () => {
-    setIsSeeking(false);
-  };
-
-  useEffect(() => {
-    if (isSeeking) {
-      window.addEventListener("mousemove", handleProgressMouseMove);
-      window.addEventListener("mouseup", handleProgressMouseUp);
-      return () => {
-        window.removeEventListener("mousemove", handleProgressMouseMove);
-        window.removeEventListener("mouseup", handleProgressMouseUp);
-      };
-    }
-  }, [isSeeking]);
 
   useEffect(() => {
     const handleGlobalMouseMove = () => {
@@ -397,16 +791,16 @@ export function VideoPlayer({
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseMove}
     >
-      <video
-        ref={videoRef}
-        src={videoUri}
-        className="video-player-video"
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onPlay={handlePlay}
-        onPause={handlePause}
-        onClick={handlePlayPause}
-      />
+      <div data-vjs-player>
+        <div ref={videoRef} />
+      </div>
+
+      {isLoadingSubtitles && (
+        <div className="video-player-loading-overlay">
+          <div className="video-player-loading-spinner"></div>
+          <div className="video-player-loading-text">Carregando...</div>
+        </div>
+      )}
 
       <button
         className={`video-player-back-btn ${showControls ? "visible" : ""}`}
@@ -422,37 +816,6 @@ export function VideoPlayer({
         >
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
-      </button>
-
-      <button
-        className={`video-player-fullscreen-btn ${
-          showControls ? "visible" : ""
-        }`}
-        onClick={handleToggleFullscreen}
-      >
-        {isFullscreen ? (
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-          </svg>
-        ) : (
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-          </svg>
-        )}
       </button>
 
       {showAudioWarning && !hasAudio && (
@@ -481,127 +844,56 @@ export function VideoPlayer({
         </div>
       )}
 
-      <div className={`video-player-controls ${showControls ? "visible" : ""}`}>
-        <div
-          ref={progressBarRef}
-          className="video-player-progress-bar"
-          onClick={handleProgressClick}
-          onMouseDown={handleProgressMouseDown}
-        >
-          <div
-            className="video-player-progress-filled"
-            style={{ width: `${progressPercentage}%` }}
-          />
-          <div
-            className="video-player-progress-handle"
-            style={{ left: `${progressPercentage}%` }}
-          />
-        </div>
-
-        <div className="video-player-controls-bottom">
-          <button className="video-player-btn" onClick={handlePlayPause}>
-            {isPlaying ? (
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <rect x="6" y="4" width="4" height="16" />
-                <rect x="14" y="4" width="4" height="16" />
-              </svg>
-            ) : (
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            )}
-          </button>
-
-          <button className="video-player-btn" onClick={handleToggleMute}>
-            {isMuted || volume === 0 ? (
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                <line x1="23" y1="9" x2="17" y2="15" />
-                <line x1="17" y1="9" x2="23" y2="15" />
-              </svg>
-            ) : (
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-              </svg>
-            )}
-          </button>
-
-          <div className="video-player-time">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </div>
-
-          {subtitles.length > 0 && (
-            <button
-              className="video-player-btn"
-              onClick={handleToggleSubtitles}
-              title="Alternar legendas (C)"
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <rect x="2" y="7" width="20" height="10" rx="2" ry="2" />
-                <line x1="6" y1="11" x2="10" y2="11" />
-                <line x1="14" y1="11" x2="18" y2="11" />
-                <line x1="6" y1="15" x2="10" y2="15" />
-                <line x1="14" y1="15" x2="18" y2="15" />
-                {!showSubtitles && (
-                  <line x1="22" y1="2" x2="2" y2="22" strokeWidth="2" />
-                )}
-              </svg>
-            </button>
-          )}
-
-          <div style={{ flex: 1 }} />
-
-          <div className="video-player-title">{movieTitle}</div>
-        </div>
-      </div>
-
-      {currentSubtitle && (
+      {currentSubtitle && showSubtitles && (
         <div
           className="video-player-subtitles"
           dangerouslySetInnerHTML={{ __html: currentSubtitle }}
         />
       )}
 
-      {!isPlaying && (
-        <div className="video-player-center-icon" onClick={handlePlayPause}>
-          <svg width="80" height="80" viewBox="0 0 24 24" fill="white">
-            <path d="M8 5v14l11-7z" />
-          </svg>
+      {showUpNext && nextEpisode && (
+        <div className="video-player-up-next-overlay">
+          <div className="video-player-up-next-content">
+            <div className="video-player-up-next-header">
+              <h3>Próximo Episódio</h3>
+              <button
+                className="video-player-up-next-close"
+                onClick={handleCancelUpNext}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="video-player-up-next-info">
+              <div className="video-player-up-next-episode">
+                <span className="video-player-up-next-badge">
+                  S{String(nextEpisode.seasonNumber).padStart(2, "0")}E
+                  {String(nextEpisode.episodeNumber).padStart(2, "0")}
+                </span>
+                {nextEpisode.episodeTitle && (
+                  <span className="video-player-up-next-title">
+                    {nextEpisode.episodeTitle}
+                  </span>
+                )}
+              </div>
+              <div className="video-player-up-next-countdown">
+                Reproduzindo em {upNextCountdown}s
+              </div>
+            </div>
+            <div className="video-player-up-next-buttons">
+              <button
+                className="video-player-up-next-btn primary"
+                onClick={() => playNextEpisode(nextEpisode)}
+              >
+                Reproduzir Agora
+              </button>
+              <button
+                className="video-player-up-next-btn secondary"
+                onClick={handleCancelUpNext}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

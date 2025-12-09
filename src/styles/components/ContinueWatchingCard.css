@@ -161,7 +161,8 @@
 
 .continue-watching-card-year,
 .continue-watching-card-quality,
-.continue-watching-card-remaining {
+.continue-watching-card-remaining,
+.continue-watching-card-badge {
   font-size: 12px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
@@ -171,6 +172,11 @@
   padding: 4px 8px;
   border-radius: 4px;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.continue-watching-card-badge {
+  background: rgba(139, 92, 246, 0.3);
+  border: 1px solid rgba(139, 92, 246, 0.5);
 }
 
 .continue-watching-card-remaining {
@@ -221,6 +227,6 @@
 
 .continue-watching-card-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(90deg, #ffffff 0%, #e16af4 100%);
   transition: width 0.3s ease;
 }

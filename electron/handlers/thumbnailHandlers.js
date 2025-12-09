@@ -120,7 +120,18 @@ async function handleCleanupThumbnails(event, movies) {
 
     const existingVideoHashes = new Set();
     for (const movie of movies) {
-      if (movie.files && movie.files.length > 0) {
+      if (movie.type === "tvshow" && movie.seasons) {
+        // For TV shows, add all episode hashes
+        for (const season of movie.seasons) {
+          for (const episode of season.episodes) {
+            if (episode.path) {
+              const hash = getVideoHash(episode.path);
+              existingVideoHashes.add(hash);
+            }
+          }
+        }
+      } else if (movie.files && movie.files.length > 0) {
+        // For movies
         const videoFile = findLargestVideoFile(movie.files);
         if (videoFile) {
           const hash = getVideoHash(videoFile.path);
@@ -151,7 +162,55 @@ async function handleCleanupThumbnails(event, movies) {
   }
 }
 
+// Generate thumbnail for a specific episode
+async function handleGenerateEpisodeThumbnail(event, episode) {
+  try {
+    console.log("=== Generating episode thumbnail ===");
+    console.log("Episode path:", episode.path);
+
+    if (!episode || !episode.path) {
+      console.error("No episode path provided");
+      return { success: false, error: "No episode path provided" };
+    }
+
+    if (!fs.existsSync(episode.path)) {
+      console.error("Episode file does not exist:", episode.path);
+      return { success: false, error: "Episode file not found" };
+    }
+
+    const videoHash = getVideoHash(episode.path);
+    const thumbnailsDir = getThumbnailsDir();
+    const thumbnailPath = path.join(thumbnailsDir, `${videoHash}.jpg`);
+
+    if (fs.existsSync(thumbnailPath)) {
+      console.log("Using cached thumbnail");
+      return {
+        success: true,
+        thumbnailPath,
+        cached: true,
+      };
+    }
+
+    console.log("Generating new thumbnail...");
+    await generateThumbnail(episode.path, thumbnailPath);
+    console.log("Thumbnail generated successfully!");
+
+    return {
+      success: true,
+      thumbnailPath,
+      cached: false,
+    };
+  } catch (error) {
+    console.error("Error generating episode thumbnail:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
 module.exports = {
   handleGenerateThumbnail,
+  handleGenerateEpisodeThumbnail,
   handleCleanupThumbnails,
 };

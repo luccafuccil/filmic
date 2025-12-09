@@ -1,0 +1,155 @@
+.season-view {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  overflow-y: auto;
+  background: #0a0a0a;
+  animation: fadeIn 0.3s ease;
+}
+
+.season-view-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+  z-index: -1;
+}
+
+.season-view-back-button {
+  position: fixed;
+  top: 80px;
+  left: 40px;
+  z-index: 1001;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.season-view-back-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.season-view-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 160px 60px 60px;
+}
+
+.season-view-header {
+  margin-bottom: 40px;
+}
+
+.season-view-title {
+  font-size: 48px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #fff;
+  display: inline-block;
+}
+
+.season-view-year {
+  font-size: 36px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+  margin-left: 12px;
+}
+
+.season-view-overview {
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 800px;
+  margin-top: 16px;
+}
+
+.season-view-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+}
+
+.season-view-tab {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  margin-bottom: -1px;
+}
+
+.season-view-tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.season-view-tab.active {
+  color: #fff;
+  border-bottom-color: #e16af4;
+}
+
+.season-view-episodes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.season-view-no-episodes {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 16px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .season-view-content {
+    padding: 100px 20px 40px;
+  }
+
+  .season-view-back-button {
+    top: 20px;
+    left: 20px;
+  }
+
+  .season-view-title {
+    font-size: 32px;
+  }
+
+  .season-view-year {
+    font-size: 24px;
+  }
+
+  .season-view-episodes {
+    grid-template-columns: 1fr;
+  }
+}

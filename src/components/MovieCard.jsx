@@ -71,6 +71,7 @@ export function MovieCard({ movie }) {
           }}
           movieId={movie.originalName || movie.title}
           movieTitle={movie.title}
+          mediaType="movie"
         />
       )}
 

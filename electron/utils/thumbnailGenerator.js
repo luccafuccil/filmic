@@ -27,8 +27,14 @@ ffmpeg.setFfprobePath(getFfprobePath());
 
 async function generateThumbnail(videoPath, outputPath) {
   return new Promise((resolve, reject) => {
+    // Validate input
+    if (!videoPath || !fs.existsSync(videoPath)) {
+      return reject(new Error(`Arquivo de vídeo não encontrado: ${videoPath}`));
+    }
+
     ffmpeg.ffprobe(videoPath, (err, metadata) => {
       if (err) {
+        console.error("FFprobe error:", err);
         return reject(
           new Error(`Erro ao obter metadados do vídeo: ${err.message}`)
         );
@@ -45,7 +51,13 @@ async function generateThumbnail(videoPath, outputPath) {
 
       const outputDir = path.dirname(outputPath);
       if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
+        try {
+          fs.mkdirSync(outputDir, { recursive: true });
+        } catch (mkdirErr) {
+          return reject(
+            new Error(`Erro ao criar diretório: ${mkdirErr.message}`)
+          );
+        }
       }
 
       ffmpeg(videoPath)
@@ -53,9 +65,11 @@ async function generateThumbnail(videoPath, outputPath) {
         .seekInput(timestamp)
         .output(outputPath)
         .on("end", () => {
+          console.log("Thumbnail generated:", outputPath);
           resolve(outputPath);
         })
         .on("error", (err) => {
+          console.error("FFmpeg error:", err);
           reject(new Error(`Erro ao gerar thumbnail: ${err.message}`));
         })
         .run();

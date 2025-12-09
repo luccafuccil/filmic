@@ -9,12 +9,17 @@ const {
   handleFileExists,
   handleReadDirectory,
   handleGetMovies,
+  handleGetMedia,
   handleGetVideoFile,
+  handleGetEpisodeVideoFile,
   handleGetSubtitles,
+  handleExtractSubtitleTrack,
+  handleCacheSubtitles,
   handleOpenInExternalPlayer,
 } = require("./handlers/fileHandlers");
 const {
   handleGenerateThumbnail,
+  handleGenerateEpisodeThumbnail,
   handleCleanupThumbnails,
 } = require("./handlers/thumbnailHandlers");
 const {
@@ -22,6 +27,9 @@ const {
   handleSaveWatchProgress,
   handleRemoveWatchProgress,
   handleGetContinueWatching,
+  handleGetEpisodeProgress,
+  handleSaveEpisodeProgress,
+  handleFindNextEpisode,
 } = require("./handlers/watchProgressHandlers");
 const { registerTmdbHandlers } = require("./handlers/tmdbHandlers");
 
@@ -66,6 +74,11 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+
+  // Abrir DevTools automaticamente em desenvolvimento
+  if (!app.isPackaged) {
+    mainWindow.webContents.openDevTools();
+  }
 
   const template = [
     {
@@ -165,15 +178,23 @@ app.whenReady().then(() => {
   ipcMain.handle("fs:exists", handleFileExists);
   ipcMain.handle("fs:readDirectory", handleReadDirectory);
   ipcMain.handle("fs:getMovies", handleGetMovies);
+  ipcMain.handle("fs:getMedia", handleGetMedia);
   ipcMain.handle("video:getFile", handleGetVideoFile);
+  ipcMain.handle("video:getEpisodeFile", handleGetEpisodeVideoFile);
   ipcMain.handle("video:getSubtitles", handleGetSubtitles);
+  ipcMain.handle("video:extractSubtitleTrack", handleExtractSubtitleTrack);
+  ipcMain.handle("video:cacheSubtitles", handleCacheSubtitles);
   ipcMain.handle("video:openExternal", handleOpenInExternalPlayer);
   ipcMain.handle("thumbnails:generate", handleGenerateThumbnail);
+  ipcMain.handle("thumbnails:generateEpisode", handleGenerateEpisodeThumbnail);
   ipcMain.handle("thumbnails:cleanup", handleCleanupThumbnails);
   ipcMain.handle("watch:getProgress", handleGetWatchProgress);
   ipcMain.handle("watch:saveProgress", handleSaveWatchProgress);
   ipcMain.handle("watch:removeProgress", handleRemoveWatchProgress);
   ipcMain.handle("watch:getContinueWatching", handleGetContinueWatching);
+  ipcMain.handle("watch:getEpisodeProgress", handleGetEpisodeProgress);
+  ipcMain.handle("watch:saveEpisodeProgress", handleSaveEpisodeProgress);
+  ipcMain.handle("watch:findNextEpisode", handleFindNextEpisode);
 
   registerTmdbHandlers();
 

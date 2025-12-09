@@ -22,16 +22,35 @@ contextBridge.exposeInMainWorld("fileAPI", {
 
   getMovies: (dirPath) => ipcRenderer.invoke("fs:getMovies", dirPath),
 
+  getMedia: (dirPath) => ipcRenderer.invoke("fs:getMedia", dirPath),
+
   getVideoFile: (movie) => ipcRenderer.invoke("video:getFile", movie),
+
+  getEpisodeVideoFile: (show, season, episode) =>
+    ipcRenderer.invoke("video:getEpisodeFile", show, season, episode),
 
   getSubtitles: (videoPath) =>
     ipcRenderer.invoke("video:getSubtitles", videoPath),
+
+  extractSubtitleTrack: (videoPath, trackIndex) =>
+    ipcRenderer.invoke("video:extractSubtitleTrack", videoPath, trackIndex),
+
+  cacheSubtitles: (videoPath, tracks, extractedContent) =>
+    ipcRenderer.invoke(
+      "video:cacheSubtitles",
+      videoPath,
+      tracks,
+      extractedContent
+    ),
 
   openInExternalPlayer: (videoPath) =>
     ipcRenderer.invoke("video:openExternal", videoPath),
 
   generateThumbnail: (movie) =>
     ipcRenderer.invoke("thumbnails:generate", movie),
+
+  generateEpisodeThumbnail: (episode) =>
+    ipcRenderer.invoke("thumbnails:generateEpisode", episode),
 
   cleanupThumbnails: (movies) =>
     ipcRenderer.invoke("thumbnails:cleanup", movies),
@@ -48,6 +67,12 @@ contextBridge.exposeInMainWorld("fileAPI", {
     return () => ipcRenderer.removeAllListeners("movies:progress");
   },
 
+  onMediaProgress: (callback) => {
+    ipcRenderer.on("media:progress", (event, data) => callback(data));
+
+    return () => ipcRenderer.removeAllListeners("media:progress");
+  },
+
   getWatchProgress: (movieId) =>
     ipcRenderer.invoke("watch:getProgress", movieId),
 
@@ -58,6 +83,28 @@ contextBridge.exposeInMainWorld("fileAPI", {
     ipcRenderer.invoke("watch:removeProgress", movieId),
 
   getContinueWatching: () => ipcRenderer.invoke("watch:getContinueWatching"),
+
+  getEpisodeProgress: (showName, year, season, episode) =>
+    ipcRenderer.invoke(
+      "watch:getEpisodeProgress",
+      showName,
+      year,
+      season,
+      episode
+    ),
+
+  saveEpisodeProgress: (showName, year, season, episode, progress) =>
+    ipcRenderer.invoke(
+      "watch:saveEpisodeProgress",
+      showName,
+      year,
+      season,
+      episode,
+      progress
+    ),
+
+  findNextEpisode: (showName, year, allEpisodes) =>
+    ipcRenderer.invoke("watch:findNextEpisode", showName, year, allEpisodes),
 
   onWatchProgressUpdated: (callback) => {
     ipcRenderer.on("watch-progress-updated", callback);
@@ -71,6 +118,24 @@ contextBridge.exposeInMainWorld("fileAPI", {
 
   getMovieMetadata: (title, year) =>
     ipcRenderer.invoke("tmdb:getMovieMetadata", title, year),
+
+  getMediaMetadata: (title, year, mediaType) =>
+    ipcRenderer.invoke("tmdb:getMediaMetadata", title, year, mediaType),
+
+  getTVShowMetadata: (title, year) =>
+    ipcRenderer.invoke("tmdb:getTVShowMetadata", title, year),
+
+  getSeasonDetails: (title, year, seasonNumber) =>
+    ipcRenderer.invoke("tmdb:getSeasonDetails", title, year, seasonNumber),
+
+  getEpisodeDetails: (title, year, seasonNumber, episodeNumber) =>
+    ipcRenderer.invoke(
+      "tmdb:getEpisodeDetails",
+      title,
+      year,
+      seasonNumber,
+      episodeNumber
+    ),
 
   checkForUpdates: () => ipcRenderer.invoke("update:check"),
   downloadUpdate: () => ipcRenderer.send("update:download"),

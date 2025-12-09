@@ -50,21 +50,60 @@ function saveCache(cacheData) {
   }
 }
 
-function getCacheKey(title, year) {
+function getCacheKey(
+  title,
+  year,
+  type = null,
+  seasonNumber = null,
+  episodeNumber = null
+) {
   const normalizedTitle = title.toLowerCase().trim();
   const normalizedYear = year ? String(year) : "no-year";
-  return `${normalizedTitle}||${normalizedYear}`;
+
+  // Base key for movies or shows
+  let key = `${normalizedTitle}||${normalizedYear}`;
+
+  // Add type prefix if specified
+  if (type) {
+    key = `${type}||${key}`;
+  }
+
+  // Add season/episode info for TV shows
+  if (seasonNumber !== null) {
+    const seasonStr = String(seasonNumber).padStart(2, "0");
+    key += `||S${seasonStr}`;
+
+    if (episodeNumber !== null) {
+      const episodeStr = String(episodeNumber).padStart(2, "0");
+      key += `E${episodeStr}`;
+    }
+  }
+
+  return key;
 }
 
-function getCachedTmdbData(title, year) {
+function getCachedTmdbData(
+  title,
+  year,
+  type = null,
+  seasonNumber = null,
+  episodeNumber = null
+) {
   const currentCache = loadCache();
-  const key = getCacheKey(title, year);
+  const key = getCacheKey(title, year, type, seasonNumber, episodeNumber);
   return currentCache[key] || null;
 }
 
-function setCachedTmdbData(title, year, metadata) {
+function setCachedTmdbData(
+  title,
+  year,
+  metadata,
+  type = null,
+  seasonNumber = null,
+  episodeNumber = null
+) {
   const currentCache = loadCache();
-  const key = getCacheKey(title, year);
+  const key = getCacheKey(title, year, type, seasonNumber, episodeNumber);
 
   currentCache[key] = {
     ...metadata,

@@ -5,8 +5,15 @@ import { getQualityLabel } from "../utils/movieHelpers";
 import { useThumbnail } from "../hooks/useThumbnail";
 import "../styles/components/ContinueWatchingCard.css";
 
-export function ContinueWatchingCard({ movie, progress, onRemove }) {
-  const { thumbnailPath, loading, error } = useThumbnail(movie);
+export function ContinueWatchingCard({
+  mediaItem,
+  progress,
+  mediaType,
+  episode,
+  onRemove,
+}) {
+  const thumbnailItem = mediaType === "tvshow" ? episode : mediaItem;
+  const { thumbnailPath, loading, error } = useThumbnail(thumbnailItem);
   const [isHovered, setIsHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoUri, setVideoUri] = useState(null);
@@ -16,7 +23,17 @@ export function ContinueWatchingCard({ movie, progress, onRemove }) {
   const handlePlay = async (e) => {
     if (e) e.stopPropagation();
     try {
-      const result = await electronAPI.getVideoFile(movie);
+      let result;
+      if (mediaType === "tvshow" && episode) {
+        result = await electronAPI.getEpisodeVideoFile(
+          mediaItem.title,
+          episode.seasonNumber,
+          episode.episodeNumber
+        );
+      } else {
+        result = await electronAPI.getVideoFile(mediaItem);
+      }
+
       if (result.success) {
         setVideoUri(result.videoUri);
         setVideoPath(result.videoPath);
@@ -35,12 +52,27 @@ export function ContinueWatchingCard({ movie, progress, onRemove }) {
 
     // Wait for fade-out animation
     setTimeout(async () => {
-      await electronAPI.removeWatchProgress(movie.originalName);
-      onRemove?.(movie.originalName);
+      const itemId =
+        mediaType === "movie" ? mediaItem.originalName : progress.movieId;
+      await electronAPI.removeWatchProgress(itemId);
+      onRemove?.(itemId);
     }, 300);
   };
 
-  const qualityBadge = getQualityLabel(movie?.resolution);
+  const qualityBadge = getQualityLabel(
+    mediaType === "tvshow" ? episode?.resolution : mediaItem?.resolution
+  );
+
+  // Build display text
+  const displayTitle =
+    mediaType === "tvshow" && episode
+      ? `${mediaItem.title} • S${String(episode.seasonNumber).padStart(
+          2,
+          "0"
+        )}E${String(episode.episodeNumber).padStart(2, "0")}`
+      : mediaItem.title;
+
+  const displayYear = mediaItem.year;
 
   return (
     <>
@@ -66,7 +98,7 @@ export function ContinueWatchingCard({ movie, progress, onRemove }) {
           <>
             <img
               src={thumbnailPath}
-              alt={movie.title}
+              alt={displayTitle}
               className="continue-watching-card-thumbnail"
             />
             <div className="continue-watching-card-overlay">
@@ -89,12 +121,15 @@ export function ContinueWatchingCard({ movie, progress, onRemove }) {
               )}
 
               <div className="continue-watching-card-info">
-                <h3 className="continue-watching-card-title">{movie.title}</h3>
+                <h3 className="continue-watching-card-title">{displayTitle}</h3>
                 <div className="continue-watching-card-meta">
-                  {movie.year && (
+                  {displayYear && (
                     <span className="continue-watching-card-year">
-                      {movie.year}
+                      {displayYear}
                     </span>
+                  )}
+                  {mediaType === "tvshow" && (
+                    <span className="continue-watching-card-badge">SÉRIE</span>
                   )}
                   {qualityBadge && (
                     <span className="continue-watching-card-quality">
@@ -137,8 +172,22 @@ export function ContinueWatchingCard({ movie, progress, onRemove }) {
             setVideoUri(null);
             setVideoPath(null);
           }}
-          movieId={movie.originalName}
-          movieTitle={movie.title}
+          movieId={
+            mediaType === "movie" ? mediaItem.originalName : progress.movieId
+          }
+          movieTitle={displayTitle}
+          mediaType={mediaType}
+          showInfo={
+            mediaType === "tvshow"
+              ? {
+                  title: mediaItem.title,
+                  year: mediaItem.year,
+                  currentEpisode: episode,
+                  allEpisodes:
+                    mediaItem.seasons?.flatMap((s) => s.episodes) || [],
+                }
+              : null
+          }
         />
       )}
     </>
