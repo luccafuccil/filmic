@@ -51,6 +51,21 @@ async function handleOpenFolder() {
   return canceled ? null : filePaths[0];
 }
 
+async function handleGetDroppedPath(event, filePath) {
+  try {
+    const stats = await fs.promises.stat(filePath);
+
+    if (stats.isFile()) {
+      return path.dirname(filePath);
+    }
+
+    return filePath;
+  } catch (error) {
+    console.error("Error getting dropped path:", error);
+    return null;
+  }
+}
+
 async function handleReadFile(event, filePath) {
   try {
     const data = await fs.promises.readFile(filePath, "utf-8");
@@ -1064,6 +1079,7 @@ async function handleGetEpisodeVideoFile(event, show, season, episode) {
 module.exports = {
   handleOpenFile,
   handleOpenFolder,
+  handleGetDroppedPath,
   handleReadFile,
   handleWriteFile,
   handleFileExists,

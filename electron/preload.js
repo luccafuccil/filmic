@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, webUtils } = require("electron");
 
 contextBridge.exposeInMainWorld("versions", {
   node: () => process.versions.node,
@@ -17,6 +17,11 @@ contextBridge.exposeInMainWorld("fileAPI", {
   exists: (filePath) => ipcRenderer.invoke("fs:exists", filePath),
 
   openFolder: () => ipcRenderer.invoke("dialog:openFolder"),
+
+  getFilePathFromDrop: (file) => webUtils.getPathForFile(file),
+
+  getDroppedPath: (filePath) =>
+    ipcRenderer.invoke("fs:getDroppedPath", filePath),
 
   readDirectory: (dirPath) => ipcRenderer.invoke("fs:readDirectory", dirPath),
 

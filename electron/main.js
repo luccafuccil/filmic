@@ -4,6 +4,7 @@ const path = require("path");
 const {
   handleOpenFile,
   handleOpenFolder,
+  handleGetDroppedPath,
   handleReadFile,
   handleWriteFile,
   handleFileExists,
@@ -62,18 +63,49 @@ ipcMain.on("window:close", () => {
 });
 
 function createWindow() {
+  const iconPath = app.isPackaged
+    ? path.join(
+        process.resourcesPath,
+        "app.asar.unpacked",
+        "public",
+        "icon.ico"
+      )
+    : path.join(__dirname, "..", "public", "icon.ico");
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     frame: false,
     backgroundColor: "#1a1a1a",
-    icon: path.join(resourcePath, "public/icon.ico"),
+    icon: iconPath,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
+      webSecurity: true,
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+  const indexPath = app.isPackaged
+    ? path.join(__dirname, "../dist/index.html")
+    : path.join(__dirname, "../dist/index.html");
+
+  mainWindow.loadFile(indexPath).catch((err) => {
+    console.error("Error loading index.html:", err);
+  });
+
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+  });
+
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (event, errorCode, errorDescription) => {
+      console.error("Failed to load:", errorCode, errorDescription);
+    }
+  );
 
   // Abrir DevTools automaticamente em desenvolvimento
   if (!app.isPackaged) {
@@ -173,6 +205,7 @@ ipcMain.handle("update:getVersion", () => {
 app.whenReady().then(() => {
   ipcMain.handle("dialog:openFile", handleOpenFile);
   ipcMain.handle("dialog:openFolder", handleOpenFolder);
+  ipcMain.handle("fs:getDroppedPath", handleGetDroppedPath);
   ipcMain.handle("fs:readFile", handleReadFile);
   ipcMain.handle("fs:writeFile", handleWriteFile);
   ipcMain.handle("fs:exists", handleFileExists);

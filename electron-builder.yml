@@ -2,35 +2,38 @@ appId: com.filmic.app
 productName: Filmic
 directories:
   output: dist
-icon: public/icon.ico
+  buildResources: public
+
 files:
   - dist/**/*
   - electron/**/*
   - public/**/*
   - package.json
   - node_modules/**/*
+
+  - "!node_modules/ffprobe-static/bin/darwin/**/*"
+  - "!node_modules/ffprobe-static/bin/linux/**/*"
 asar: true
 asarUnpack:
   - node_modules/ffmpeg-static/**/*
   - node_modules/ffprobe-static/**/*
-  - node_modules/iconv-lite/**/*
+  - public/**/*
 npmRebuild: false
 buildDependenciesFromSource: false
+compression: store
 
-# Configuração de publicação para auto-updates
 publish:
   provider: github
   owner: luccafuccil
   repo: filmic
 
 win:
+  icon: public/icon.ico
   target:
     - target: nsis
       arch:
         - x64
-    - target: portable
-      arch:
-        - x64
+
   signAndEditExecutable: true
 
 nsis:

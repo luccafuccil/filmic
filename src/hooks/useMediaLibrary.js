@@ -54,6 +54,13 @@ export function useMediaLibrary() {
     }
   };
 
+  const setLibraryFolder = (path) => {
+    if (path) {
+      localStorage.setItem("lastLibraryPath", path);
+      loadMedia(path);
+    }
+  };
+
   const changeFolder = async () => {
     const path = await electronAPI.openFolder();
     if (path) {
@@ -98,6 +105,7 @@ export function useMediaLibrary() {
     loadingProgress,
     error,
     selectFolder,
+    setLibraryFolder,
     changeFolder,
   };
 }
