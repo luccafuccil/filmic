@@ -19,7 +19,9 @@ export const electronAPI = {
     fileAPI.extractSubtitleTrack(videoPath, trackIndex),
   cacheSubtitles: (videoPath, tracks, extractedContent) =>
     fileAPI.cacheSubtitles(videoPath, tracks, extractedContent),
-  openInExternalPlayer: (videoPath) => fileAPI.openInExternalPlayer(videoPath),
+  openInExternalPlayer: (videoPath, playerPath) =>
+    fileAPI.openInExternalPlayer(videoPath, playerPath),
+  selectPlayerExecutable: () => fileAPI.selectPlayerExecutable(),
   generateThumbnail: (movie) => fileAPI.generateThumbnail(movie),
   generateEpisodeThumbnail: (episode) =>
     fileAPI.generateEpisodeThumbnail(episode),

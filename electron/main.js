@@ -17,6 +17,7 @@ const {
   handleExtractSubtitleTrack,
   handleCacheSubtitles,
   handleOpenInExternalPlayer,
+  handleSelectPlayerExecutable,
 } = require("./handlers/fileHandlers");
 const {
   handleGenerateThumbnail,
@@ -68,7 +69,7 @@ function createWindow() {
         process.resourcesPath,
         "app.asar.unpacked",
         "public",
-        "icon.ico"
+        "icon.ico",
       )
     : path.join(__dirname, "..", "public", "icon.ico");
 
@@ -104,7 +105,7 @@ function createWindow() {
     "did-fail-load",
     (event, errorCode, errorDescription) => {
       console.error("Failed to load:", errorCode, errorDescription);
-    }
+    },
   );
 
   // Abrir DevTools automaticamente em desenvolvimento
@@ -137,18 +138,31 @@ function createWindow() {
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.logger = require("electron-log");
+autoUpdater.logger.transports.file.level = "info";
+
+autoUpdater.on("checking-for-update", () => {
+  console.log("[AutoUpdater] Checking for update...");
+});
 
 autoUpdater.on("update-available", (info) => {
-  console.log("Update available:", info.version);
+  console.log("[AutoUpdater] Update available:", info.version);
+  console.log("[AutoUpdater] Current version:", app.getVersion());
   mainWindow.webContents.send("update:available", info);
 });
 
-autoUpdater.on("update-not-available", () => {
-  console.log("Update not available");
+autoUpdater.on("update-not-available", (info) => {
+  console.log(
+    "[AutoUpdater] Update not available. Current version:",
+    app.getVersion(),
+  );
+  console.log("[AutoUpdater] Latest version:", info.version);
 });
 
 autoUpdater.on("error", (err) => {
-  console.error("Update error:", err);
+  console.error("[AutoUpdater] Error:", err);
+  console.error("[AutoUpdater] Error message:", err.message);
+  console.error("[AutoUpdater] Error stack:", err.stack);
 });
 
 autoUpdater.on("download-progress", (progressObj) => {
@@ -172,6 +186,9 @@ ipcMain.on("update:download", () => {
 ipcMain.handle("update:check", async () => {
   try {
     if (!app.isPackaged) {
+      console.log(
+        "[AutoUpdater] Running in development mode, skipping update check",
+      );
       return {
         updateAvailable: false,
         currentVersion: app.getVersion(),
@@ -179,21 +196,32 @@ ipcMain.handle("update:check", async () => {
       };
     }
 
+    console.log(
+      "[AutoUpdater] Manual check initiated. Current version:",
+      app.getVersion(),
+    );
     const result = await autoUpdater.checkForUpdates();
+    console.log("[AutoUpdater] Check result:", result?.updateInfo?.version);
+
+    const updateAvailable =
+      result &&
+      result.updateInfo &&
+      result.updateInfo.version !== app.getVersion();
+    console.log("[AutoUpdater] Update available:", updateAvailable);
+
     return {
-      updateAvailable:
-        result &&
-        result.updateInfo &&
-        result.updateInfo.version !== app.getVersion(),
+      updateAvailable,
       currentVersion: app.getVersion(),
       latestVersion: result?.updateInfo?.version || app.getVersion(),
     };
   } catch (error) {
-    console.error("Error checking for updates:", error);
+    console.error("[AutoUpdater] Error checking for updates:", error);
+    console.error("[AutoUpdater] Error details:", error.message);
     return {
       updateAvailable: false,
       currentVersion: app.getVersion(),
       latestVersion: app.getVersion(),
+      error: error.message,
     };
   }
 });
@@ -218,6 +246,7 @@ app.whenReady().then(() => {
   ipcMain.handle("video:extractSubtitleTrack", handleExtractSubtitleTrack);
   ipcMain.handle("video:cacheSubtitles", handleCacheSubtitles);
   ipcMain.handle("video:openExternal", handleOpenInExternalPlayer);
+  ipcMain.handle("player:selectExecutable", handleSelectPlayerExecutable);
   ipcMain.handle("thumbnails:generate", handleGenerateThumbnail);
   ipcMain.handle("thumbnails:generateEpisode", handleGenerateEpisodeThumbnail);
   ipcMain.handle("thumbnails:cleanup", handleCleanupThumbnails);

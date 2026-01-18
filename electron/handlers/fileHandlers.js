@@ -177,7 +177,7 @@ async function handleGetMovies(event, dirPath) {
 
           if (videoMetadata && videoMetadata.streams) {
             const videoStream = videoMetadata.streams.find(
-              (s) => s.codec_type === "video"
+              (s) => s.codec_type === "video",
             );
 
             if (videoStream) {
@@ -198,7 +198,7 @@ async function handleGetMovies(event, dirPath) {
       } catch (error) {
         console.error(
           `Erro ao extrair metadados para ${videoFile.name}:`,
-          error
+          error,
         );
       }
 
@@ -232,7 +232,7 @@ async function handleGetMovies(event, dirPath) {
         }));
 
       const videoFilesOnly = videoFiles.filter((file) =>
-        videoExtensions.includes(file.extension.toLowerCase())
+        videoExtensions.includes(file.extension.toLowerCase()),
       );
 
       // Se não houver vídeos, pula a pasta
@@ -259,7 +259,7 @@ async function handleGetMovies(event, dirPath) {
               ...file,
               size: stats.size,
             };
-          })
+          }),
         );
 
         filesWithSize.sort((a, b) => b.size - a.size);
@@ -269,7 +269,7 @@ async function handleGetMovies(event, dirPath) {
         if (!movieInfo.parsed) {
           const nameWithoutExt = path.basename(
             largestVideo.name,
-            largestVideo.extension
+            largestVideo.extension,
           );
           const fileBasedInfo = parseMovieFileName(nameWithoutExt);
 
@@ -286,7 +286,7 @@ async function handleGetMovies(event, dirPath) {
 
           if (videoMetadata && videoMetadata.streams) {
             const videoStream = videoMetadata.streams.find(
-              (s) => s.codec_type === "video"
+              (s) => s.codec_type === "video",
             );
 
             if (videoStream) {
@@ -335,7 +335,7 @@ async function handleGetVideoFile(event, movie) {
     const videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"];
 
     const videoFiles = movie.files.filter((file) =>
-      videoExtensions.includes(file.extension.toLowerCase())
+      videoExtensions.includes(file.extension.toLowerCase()),
     );
 
     if (videoFiles.length === 0) {
@@ -349,7 +349,7 @@ async function handleGetVideoFile(event, movie) {
           ...file,
           size: stats.size,
         };
-      })
+      }),
     );
 
     filesWithSize.sort((a, b) => b.size - a.size);
@@ -421,7 +421,7 @@ async function handleGetSubtitles(event, videoPath) {
             "[SUBTITLE] Failed to decode with",
             encoding,
             ":",
-            e.message
+            e.message,
           );
         }
       }
@@ -441,7 +441,7 @@ async function handleGetSubtitles(event, videoPath) {
       };
     } catch {
       console.log(
-        "[SUBTITLE] .srt file not found, checking for internal subtitles"
+        "[SUBTITLE] .srt file not found, checking for internal subtitles",
       );
     }
 
@@ -480,19 +480,19 @@ async function handleGetSubtitles(event, videoPath) {
 
         console.log(
           "[SUBTITLE] FFmpeg output received, length:",
-          probeOutput.length
+          probeOutput.length,
         );
 
         // Procurar por tracks de subtitle
         const subtitleMatches = [
           ...probeOutput.matchAll(
-            /Stream #0:(\d+)(?:\((\w+)\))?: Subtitle: (\w+)(.*)/gi
+            /Stream #0:(\d+)(?:\((\w+)\))?: Subtitle: (\w+)(.*)/gi,
           ),
         ];
 
         if (subtitleMatches.length > 0) {
           console.log(
-            `[SUBTITLE] Found ${subtitleMatches.length} internal subtitle track(s)`
+            `[SUBTITLE] Found ${subtitleMatches.length} internal subtitle track(s)`,
           );
 
           const tracks = subtitleMatches.map((match, index) => {
@@ -551,7 +551,7 @@ async function handleGetSubtitles(event, videoPath) {
       } catch (error) {
         console.error(
           "[SUBTITLE] Error checking internal subtitles:",
-          error.message
+          error.message,
         );
       }
     }
@@ -568,7 +568,7 @@ async function handleExtractSubtitleTrack(event, videoPath, trackIndex) {
   try {
     console.log(
       `[SUBTITLE] Extracting subtitle track ${trackIndex} from:`,
-      videoPath
+      videoPath,
     );
 
     const tempDir = path.join(require("os").tmpdir(), "filmic-subtitles");
@@ -595,7 +595,7 @@ async function handleExtractSubtitleTrack(event, videoPath, trackIndex) {
 
     console.log(
       "[SUBTITLE] Successfully extracted subtitle, length:",
-      content.length
+      content.length,
     );
 
     return {
@@ -618,7 +618,7 @@ async function handleCacheSubtitles(
   event,
   videoPath,
   tracks,
-  extractedContent
+  extractedContent,
 ) {
   try {
     await cacheSubtitles(videoPath, tracks, extractedContent);
@@ -629,14 +629,34 @@ async function handleCacheSubtitles(
   }
 }
 
-async function handleOpenInExternalPlayer(event, videoPath) {
+async function handleOpenInExternalPlayer(event, videoPath, playerPath = null) {
   try {
-    await shell.openPath(videoPath);
+    if (playerPath) {
+      // Open with custom player
+      const { spawn } = require("child_process");
+      spawn(playerPath, [videoPath], { detached: true, stdio: "ignore" });
+    } else {
+      // Open with default player
+      await shell.openPath(videoPath);
+    }
     return { success: true };
   } catch (error) {
     console.error("[FileHandler] Error opening external player:", error);
     return { success: false, error: error.message };
   }
+}
+
+async function handleSelectPlayerExecutable() {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ["openFile"],
+    filters: [
+      { name: "Executável", extensions: ["exe"] },
+      { name: "Todos os arquivos", extensions: ["*"] },
+    ],
+    title: "Selecione o executável do player",
+  });
+
+  return canceled ? null : filePaths[0];
 }
 
 // Unified media handler - scans for both movies and TV shows
@@ -698,7 +718,7 @@ async function handleGetMedia(event, dirPath) {
 
           if (videoMetadata && videoMetadata.streams) {
             const videoStream = videoMetadata.streams.find(
-              (s) => s.codec_type === "video"
+              (s) => s.codec_type === "video",
             );
 
             if (videoStream) {
@@ -719,7 +739,7 @@ async function handleGetMedia(event, dirPath) {
       } catch (error) {
         console.error(
           `Error extracting metadata for ${videoFile.name}:`,
-          error
+          error,
         );
       }
 
@@ -767,7 +787,7 @@ async function handleGetMedia(event, dirPath) {
         }));
 
       const videoFilesOnly = videoFiles.filter((file) =>
-        videoExtensions.includes(file.extension.toLowerCase())
+        videoExtensions.includes(file.extension.toLowerCase()),
       );
 
       // Skip if no videos
@@ -782,7 +802,7 @@ async function handleGetMedia(event, dirPath) {
 
       // Check if folder contains TV show episodes
       const hasTVShowEpisodes = videoFilesOnly.some((file) =>
-        hasEpisodePattern(file.name)
+        hasEpisodePattern(file.name),
       );
 
       if (hasTVShowEpisodes) {
@@ -790,7 +810,7 @@ async function handleGetMedia(event, dirPath) {
         // Check for season subfolders
         const subfolders = files.filter((f) => f.isDirectory());
         const seasonFolders = subfolders.filter((f) =>
-          /season|^s\d{1,2}$/i.test(f.name)
+          /season|^s\d{1,2}$/i.test(f.name),
         );
 
         if (seasonFolders.length > 0) {
@@ -811,17 +831,17 @@ async function handleGetMedia(event, dirPath) {
                 extension: path.extname(file.name),
               }))
               .filter((file) =>
-                videoExtensions.includes(file.extension.toLowerCase())
+                videoExtensions.includes(file.extension.toLowerCase()),
               );
 
             for (const videoFile of seasonVideoFiles) {
               const nameWithoutExt = path.basename(
                 videoFile.name,
-                videoFile.extension
+                videoFile.extension,
               );
               const episodeInfo = parseTVShowFileName(
                 nameWithoutExt,
-                seasonFolder.name
+                seasonFolder.name,
               );
 
               // Use folder name for show title if not parsed from filename
@@ -847,7 +867,7 @@ async function handleGetMedia(event, dirPath) {
 
                   if (videoMetadata && videoMetadata.streams) {
                     const videoStream = videoMetadata.streams.find(
-                      (s) => s.codec_type === "video"
+                      (s) => s.codec_type === "video",
                     );
 
                     if (videoStream) {
@@ -868,7 +888,7 @@ async function handleGetMedia(event, dirPath) {
               } catch (error) {
                 console.error(
                   `Error extracting metadata for ${videoFile.name}:`,
-                  error
+                  error,
                 );
               }
 
@@ -888,11 +908,11 @@ async function handleGetMedia(event, dirPath) {
           for (const videoFile of videoFilesOnly) {
             const nameWithoutExt = path.basename(
               videoFile.name,
-              videoFile.extension
+              videoFile.extension,
             );
             const episodeInfo = parseTVShowFileName(
               nameWithoutExt,
-              folder.name
+              folder.name,
             );
 
             // Use folder name for show title if not parsed from filename
@@ -913,7 +933,7 @@ async function handleGetMedia(event, dirPath) {
 
                 if (videoMetadata && videoMetadata.streams) {
                   const videoStream = videoMetadata.streams.find(
-                    (s) => s.codec_type === "video"
+                    (s) => s.codec_type === "video",
                   );
 
                   if (videoStream) {
@@ -934,7 +954,7 @@ async function handleGetMedia(event, dirPath) {
             } catch (error) {
               console.error(
                 `Error extracting metadata for ${videoFile.name}:`,
-                error
+                error,
               );
             }
 
@@ -964,7 +984,7 @@ async function handleGetMedia(event, dirPath) {
                 ...file,
                 size: stats.size,
               };
-            })
+            }),
           );
 
           filesWithSize.sort((a, b) => b.size - a.size);
@@ -973,7 +993,7 @@ async function handleGetMedia(event, dirPath) {
           if (!movieInfo.parsed) {
             const nameWithoutExt = path.basename(
               largestVideo.name,
-              largestVideo.extension
+              largestVideo.extension,
             );
             const fileBasedInfo = parseMovieFileName(nameWithoutExt);
 
@@ -989,7 +1009,7 @@ async function handleGetMedia(event, dirPath) {
 
             if (videoMetadata && videoMetadata.streams) {
               const videoStream = videoMetadata.streams.find(
-                (s) => s.codec_type === "video"
+                (s) => s.codec_type === "video",
               );
 
               if (videoStream) {
@@ -1056,7 +1076,7 @@ async function handleGetEpisodeVideoFile(event, show, season, episode) {
 
     // Find the episode
     const episodeData = seasonData.episodes.find(
-      (ep) => ep.episodeNumber === episode
+      (ep) => ep.episodeNumber === episode,
     );
     if (!episodeData) {
       return { success: false, error: "Episode not found" };
@@ -1092,4 +1112,5 @@ module.exports = {
   handleExtractSubtitleTrack,
   handleCacheSubtitles,
   handleOpenInExternalPlayer,
+  handleSelectPlayerExecutable,
 };

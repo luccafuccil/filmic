@@ -6,6 +6,7 @@ import { TitleBar } from "./components/TitleBar";
 import { SplashScreen } from "./components/SplashScreen";
 import { ContinueWatchingSection } from "./components/ContinueWatchingSection";
 import { Settings } from "./components/Settings";
+import { PlayerSettings } from "./components/PlayerSettings";
 import { UpdateModal } from "./components/UpdateModal";
 import "./styles/components/App.css";
 
@@ -113,6 +114,7 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPlayerSettings, setShowPlayerSettings] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -144,7 +146,7 @@ function App() {
 
     const searchNormalized = normalizeString(debouncedSearch);
     return filteredMedia.filter((item) =>
-      normalizeString(item.title).includes(searchNormalized)
+      normalizeString(item.title).includes(searchNormalized),
     );
   }, [filteredMedia, debouncedSearch]);
 
@@ -178,6 +180,9 @@ function App() {
       try {
         const result = await electronAPI.checkForUpdates();
         setUpdateInfo(result);
+        if (result.updateAvailable) {
+          setShowUpdateModal(true);
+        }
       } catch (error) {
         console.error("Erro ao verificar atualizações:", error);
       }
@@ -191,6 +196,7 @@ function App() {
         updateAvailable: true,
         latestVersion: info.version,
       }));
+      setShowUpdateModal(true);
     });
 
     return () => {
@@ -239,7 +245,7 @@ function App() {
         }
       }
     },
-    [setLibraryFolder]
+    [setLibraryFolder],
   );
 
   const handleSettingsOpen = useCallback(() => {
@@ -248,6 +254,14 @@ function App() {
 
   const handleSettingsClose = useCallback(() => {
     setShowSettings(false);
+  }, []);
+
+  const handlePlayerSettingsOpen = useCallback(() => {
+    setShowPlayerSettings(true);
+  }, []);
+
+  const handlePlayerSettingsClose = useCallback(() => {
+    setShowPlayerSettings(false);
   }, []);
 
   const handleChangeFolder = useCallback(() => {
@@ -317,6 +331,7 @@ function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onSettingsClick={handleSettingsOpen}
+        onPlayerSettingsClick={handlePlayerSettingsOpen}
         onUpdateClick={handleUpdateClick}
         hasUpdate={updateInfo.updateAvailable}
       />
@@ -324,6 +339,10 @@ function App() {
         isOpen={showSettings}
         onClose={handleSettingsClose}
         onChangeFolder={handleChangeFolder}
+      />
+      <PlayerSettings
+        isOpen={showPlayerSettings}
+        onClose={handlePlayerSettingsClose}
       />
       <UpdateModal
         isOpen={showUpdateModal}

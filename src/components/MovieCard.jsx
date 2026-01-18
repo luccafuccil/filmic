@@ -26,7 +26,7 @@ export function MovieCard({ movie }) {
       try {
         const result = await electronAPI.getMovieMetadata(
           movie.title,
-          movie.year
+          movie.year,
         );
         if (result.success && result.metadata) {
           setTmdbData(result.metadata);
@@ -45,11 +45,29 @@ export function MovieCard({ movie }) {
   const handlePlay = async (e) => {
     e.stopPropagation();
     try {
+      const playerPreference =
+        localStorage.getItem("playerPreference") || "built-in";
       const result = await electronAPI.getVideoFile(movie);
+
       if (result.success) {
-        setVideoUri(result.videoUri);
-        setVideoPath(result.videoPath);
-        setIsPlaying(true);
+        if (playerPreference === "external") {
+          const customPlayerPath = localStorage.getItem("customPlayerPath");
+          if (customPlayerPath) {
+            await electronAPI.openInExternalPlayer(
+              result.videoPath,
+              customPlayerPath,
+            );
+          } else {
+            // Fallback to built-in if no custom player set
+            setVideoUri(result.videoUri);
+            setVideoPath(result.videoPath);
+            setIsPlaying(true);
+          }
+        } else {
+          setVideoUri(result.videoUri);
+          setVideoPath(result.videoPath);
+          setIsPlaying(true);
+        }
       } else {
         alert("Não foi possível carregar o vídeo: " + result.error);
       }

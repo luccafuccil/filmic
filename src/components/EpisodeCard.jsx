@@ -23,7 +23,7 @@ export function EpisodeCard({ episode, season, show }) {
           show.title,
           show.year,
           season,
-          episode.episodeNumber
+          episode.episodeNumber,
         );
         setProgress(prog);
       } catch (err) {
@@ -37,15 +37,33 @@ export function EpisodeCard({ episode, season, show }) {
   const handlePlay = async (e) => {
     e.stopPropagation();
     try {
+      const playerPreference =
+        localStorage.getItem("playerPreference") || "built-in";
       const result = await electronAPI.getEpisodeVideoFile(
         show,
         season,
-        episode.episodeNumber
+        episode.episodeNumber,
       );
+
       if (result.success) {
-        setVideoUri(result.videoUri);
-        setVideoPath(result.videoPath);
-        setIsPlaying(true);
+        if (playerPreference === "external") {
+          const customPlayerPath = localStorage.getItem("customPlayerPath");
+          if (customPlayerPath) {
+            await electronAPI.openInExternalPlayer(
+              result.videoPath,
+              customPlayerPath,
+            );
+          } else {
+            // Fallback to built-in if no custom player set
+            setVideoUri(result.videoUri);
+            setVideoPath(result.videoPath);
+            setIsPlaying(true);
+          }
+        } else {
+          setVideoUri(result.videoUri);
+          setVideoPath(result.videoPath);
+          setIsPlaying(true);
+        }
       } else {
         alert("Não foi possível carregar o vídeo: " + result.error);
       }
@@ -70,14 +88,14 @@ export function EpisodeCard({ episode, season, show }) {
             setVideoPath(null);
           }}
           movieId={`${show.title} (${show.year || "no-year"})||S${String(
-            season
+            season,
           ).padStart(2, "0")}E${String(episode.episodeNumber).padStart(
             2,
-            "0"
+            "0",
           )}`}
           movieTitle={`${show.title} - S${String(season).padStart(
             2,
-            "0"
+            "0",
           )}E${String(episode.episodeNumber).padStart(2, "0")}`}
           mediaType="tvshow"
           showInfo={{

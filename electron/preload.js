@@ -45,11 +45,13 @@ contextBridge.exposeInMainWorld("fileAPI", {
       "video:cacheSubtitles",
       videoPath,
       tracks,
-      extractedContent
+      extractedContent,
     ),
 
-  openInExternalPlayer: (videoPath) =>
-    ipcRenderer.invoke("video:openExternal", videoPath),
+  openInExternalPlayer: (videoPath, playerPath) =>
+    ipcRenderer.invoke("video:openExternal", videoPath, playerPath),
+
+  selectPlayerExecutable: () => ipcRenderer.invoke("player:selectExecutable"),
 
   generateThumbnail: (movie) =>
     ipcRenderer.invoke("thumbnails:generate", movie),
@@ -95,7 +97,7 @@ contextBridge.exposeInMainWorld("fileAPI", {
       showName,
       year,
       season,
-      episode
+      episode,
     ),
 
   saveEpisodeProgress: (showName, year, season, episode, progress) =>
@@ -105,7 +107,7 @@ contextBridge.exposeInMainWorld("fileAPI", {
       year,
       season,
       episode,
-      progress
+      progress,
     ),
 
   findNextEpisode: (showName, year, allEpisodes) =>
@@ -139,7 +141,7 @@ contextBridge.exposeInMainWorld("fileAPI", {
       title,
       year,
       seasonNumber,
-      episodeNumber
+      episodeNumber,
     ),
 
   checkForUpdates: () => ipcRenderer.invoke("update:check"),

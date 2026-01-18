@@ -26,6 +26,7 @@ publish:
   provider: github
   owner: luccafuccil
   repo: filmic
+  releaseType: release
 
 win:
   icon: public/icon.ico
@@ -33,7 +34,6 @@ win:
     - target: nsis
       arch:
         - x64
-
   signAndEditExecutable: true
 
 nsis:
@@ -42,3 +42,7 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   differentialPackage: false
+  deleteAppDataOnUninstall: false
+  installerIcon: public/icon.ico
+  uninstallerIcon: public/icon.ico
+  shortcutName: "Filmic"

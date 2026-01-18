@@ -23,21 +23,39 @@ export function ContinueWatchingCard({
   const handlePlay = async (e) => {
     if (e) e.stopPropagation();
     try {
+      const playerPreference =
+        localStorage.getItem("playerPreference") || "built-in";
       let result;
+
       if (mediaType === "tvshow" && episode) {
         result = await electronAPI.getEpisodeVideoFile(
           mediaItem.title,
           episode.seasonNumber,
-          episode.episodeNumber
+          episode.episodeNumber,
         );
       } else {
         result = await electronAPI.getVideoFile(mediaItem);
       }
 
       if (result.success) {
-        setVideoUri(result.videoUri);
-        setVideoPath(result.videoPath);
-        setIsPlaying(true);
+        if (playerPreference === "external") {
+          const customPlayerPath = localStorage.getItem("customPlayerPath");
+          if (customPlayerPath) {
+            await electronAPI.openInExternalPlayer(
+              result.videoPath,
+              customPlayerPath,
+            );
+          } else {
+            // Fallback to built-in if no custom player set
+            setVideoUri(result.videoUri);
+            setVideoPath(result.videoPath);
+            setIsPlaying(true);
+          }
+        } else {
+          setVideoUri(result.videoUri);
+          setVideoPath(result.videoPath);
+          setIsPlaying(true);
+        }
       } else {
         alert("Não foi possível carregar o vídeo: " + result.error);
       }
@@ -60,7 +78,7 @@ export function ContinueWatchingCard({
   };
 
   const qualityBadge = getQualityLabel(
-    mediaType === "tvshow" ? episode?.resolution : mediaItem?.resolution
+    mediaType === "tvshow" ? episode?.resolution : mediaItem?.resolution,
   );
 
   // Build display text
@@ -68,7 +86,7 @@ export function ContinueWatchingCard({
     mediaType === "tvshow" && episode
       ? `${mediaItem.title} • S${String(episode.seasonNumber).padStart(
           2,
-          "0"
+          "0",
         )}E${String(episode.episodeNumber).padStart(2, "0")}`
       : mediaItem.title;
 
