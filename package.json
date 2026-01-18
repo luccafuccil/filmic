@@ -1,7 +1,7 @@
 {
   "name": "filmic",
-  "version": "1.2.2",
-  "description": "Your film app.",
+  "version": "1.2.3",
+  "description": "Sua plataformas de filmes, do seu jeito.",
   "license": "ISC",
   "author": "lucca",
   "main": "electron/main.js",
